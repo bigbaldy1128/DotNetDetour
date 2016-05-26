@@ -33,7 +33,7 @@ namespace Test
         public void SystemMethod()
         {
             Monitor.Install();
-            Assert.AreEqual("BA", File.ReadAllText("test"));
+            Assert.AreEqual("BA", File.ReadAllText("../../test"));
         }
 
         [TestMethod]
