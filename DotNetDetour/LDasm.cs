@@ -632,13 +632,6 @@ namespace DotNetDetour
             return Result;
         }
 
-        /// <summary>
-        /// 计算汇编指令长度
-        /// </summary>
-        /// <param name="code"></param>
-        /// <param name="ld"></param>
-        /// <param name="is64"></param>
-        /// <returns></returns>
         static uint ldasm(void* code, ldasm_data ld, bool is64)
         {
             byte* p = (byte*)code;
