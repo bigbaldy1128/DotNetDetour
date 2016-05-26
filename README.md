@@ -10,7 +10,7 @@ DotNetDetour是一个用于.net方法hook的类库
 ##快速示例
 1.安装：Install-Package DotNetDetour
 
-2.定义一个监视器，编译成dll，放入程序exe所在目录下的monitors目录
+2.新建一个类并继承IMethodMonitor接口
 ```
 public class CustomMonitor : IMethodMonitor //自定义一个类并继承IMethodMonitor接口
 {
@@ -28,5 +28,19 @@ public class CustomMonitor : IMethodMonitor //自定义一个类并继承IMethod
     }
 }
 ```
-3.安装监视器
-`Monitor.Install("monitors")` //这里指定默认目录为monitors
+3.定义目标函数，例如：
+```
+public string Get()
+{
+    return "A"
+}
+```
+4.安装监视器
+```
+Console.WrtieLine(Get());
+Monitor.Install()
+Console.WrtieLine(Get());
+```
+第一次调用Get输出的值是"A",第二次是"BA"
+
+
