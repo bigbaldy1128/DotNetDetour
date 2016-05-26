@@ -12,7 +12,7 @@ namespace Test
     {
         public string Property
         {
-            [Monitor("Test","A","Test.dll")]
+            [Monitor("Test","A")]
             get
             {
                 return "B" + OriginalProperty;

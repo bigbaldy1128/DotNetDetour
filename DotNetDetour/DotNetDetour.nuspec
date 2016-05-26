@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>DotNetDetour</id>
-    <version>1.0.1.0</version>
+    <version>1.0.2.0</version>
     <authors>bigbaldy</authors>
     <owners>bigbaldy</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>

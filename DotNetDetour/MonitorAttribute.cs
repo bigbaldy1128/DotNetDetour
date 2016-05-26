@@ -11,14 +11,12 @@ namespace DotNetDetour
     {
         public string NamespaceName { get; set; }
         public string ClassName { get; set; }
-        public string AssemblyName { get; set; }
         public Type Type { get; set; }
 
-        public MonitorAttribute(string NamespaceName,string ClassName, string AssemblyName=null)
+        public MonitorAttribute(string NamespaceName,string ClassName)
         {
             this.NamespaceName = NamespaceName;
             this.ClassName = ClassName;
-            this.AssemblyName = AssemblyName;
         }
 
         public MonitorAttribute(Type type)

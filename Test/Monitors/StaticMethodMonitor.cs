@@ -10,7 +10,7 @@ namespace Test
 {
     public class StaticMethodMonitor : IMethodMonitor
     {
-        [Monitor("Test","A", "Test.dll")]
+        [Monitor("Test","A")]
         public static string StaticMethod()
         {
             return "B" + OriginalMethod();

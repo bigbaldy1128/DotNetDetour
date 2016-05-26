@@ -8,9 +8,16 @@ using System.Threading.Tasks;
 
 namespace DotNetDetour
 {
+    class DestAndOri
+    {
+        public MethodInfo Dest;
+        public MethodInfo Ori;
+    }
+
     public class Monitor
     {
         static bool installed = false;
+        static List<DestAndOri> destAndOris = new List<DestAndOri>();
         /// <summary>
         /// 安装监视器
         /// </summary>
@@ -19,13 +26,11 @@ namespace DotNetDetour
             if (installed)
                 return;
             installed = true;
-            IEnumerable<IMethodMonitor> monitors = null;
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            IEnumerable<IMethodMonitor> monitors;
             if (string.IsNullOrEmpty(dir))
             {
-                monitors = AppDomain
-                            .CurrentDomain
-                            .GetAssemblies()
-                            .SelectMany(t => t.GetImplementedObjectsByInterface<IMethodMonitor>());
+                monitors = assemblies.SelectMany(t => t.GetImplementedObjectsByInterface<IMethodMonitor>());
             }
             else
             {
@@ -35,14 +40,31 @@ namespace DotNetDetour
             }
             foreach (var monitor in monitors)
             {
-                MethodInfo src = null;
-                var dest = monitor
+                DestAndOri destAndOri = new DestAndOri();
+                destAndOri.Dest= monitor
                             .GetType()
                             .GetMethods()
                             .FirstOrDefault(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(MonitorAttribute)));
-                if (dest == null)
-                    continue;
-                var monitorAttribute=dest.GetCustomAttribute(typeof(MonitorAttribute)) as MonitorAttribute;
+                destAndOri.Ori = monitor
+                            .GetType()
+                            .GetMethods()
+                            .FirstOrDefault(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(OriginalAttribute)));
+                if (destAndOri.Dest != null)
+                {
+                    destAndOris.Add(destAndOri);
+                }
+            }
+            InstallInternal(assemblies);
+            AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
+        }
+
+        private static void InstallInternal(Assembly[] assemblies)
+        {
+            foreach (var destAndOri in destAndOris)
+            {
+                MethodInfo src = null;
+                var dest = destAndOri.Dest;
+                var monitorAttribute = dest.GetCustomAttribute(typeof(MonitorAttribute)) as MonitorAttribute;
                 var methodName = dest.Name;
                 var paramTypes = dest.GetParameters().Select(t => t.ParameterType).ToArray();
                 if (monitorAttribute.Type != null)
@@ -52,25 +74,27 @@ namespace DotNetDetour
                 else
                 {
                     var srcNamespaceAndClass = monitorAttribute.NamespaceName + "." + monitorAttribute.ClassName;
-
-                    if (string.IsNullOrEmpty(monitorAttribute.AssemblyName))
+                    foreach (var asm in assemblies)
                     {
-                        src = Type.GetType(srcNamespaceAndClass).GetMethod(methodName, paramTypes);
-                    }
-                    else
-                    {
-                        Assembly asm = Assembly.LoadFrom(monitorAttribute.AssemblyName);
-                        src = asm.GetType(srcNamespaceAndClass).GetMethod(methodName, paramTypes);
+                        var type= asm.GetExportedTypes().FirstOrDefault(t => t.FullName == srcNamespaceAndClass);
+                        if (type != null)
+                        {
+                            src = type.GetMethod(methodName, paramTypes);
+                            break;
+                        }
                     }
                 }
                 if (src == null)
                     continue;
-                var ori = monitor.GetType()
-                            .GetMethods()
-                            .FirstOrDefault(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(OriginalAttribute)));
+                var ori = destAndOri.Ori;
                 var engine = DetourFactory.CreateDetourEngine();
                 engine.Patch(src, dest, ori);
             }
+        }
+
+        private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+        {
+            InstallInternal(new[] { args.LoadedAssembly });
         }
     }
 }

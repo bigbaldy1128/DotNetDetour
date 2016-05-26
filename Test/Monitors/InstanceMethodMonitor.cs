@@ -10,7 +10,7 @@ namespace Test
 {
     public class InstanceMethodMonitor : IMethodMonitor
     {
-        [Monitor("Test", "A", "Test.dll")]
+        [Monitor("Test", "A")]
         public string InstanceMethod()
         {
             return "B" + Ori();
