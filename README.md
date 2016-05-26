@@ -7,7 +7,7 @@ DotNetDetour是一个用于.net方法hook的类库
 * 支持.net基础类库方法的hook
 * 无任何性能影响
 
-##Hook方法示例
+##快速示例
 1.安装：Install-Package DotNetDetour
 
 2.定义一个监视器，编译成dll，放入程序所在目录下的monitors目录
