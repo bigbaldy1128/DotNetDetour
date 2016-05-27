@@ -24,7 +24,7 @@ namespace DotNetDetour.DetourWays
         protected override void CreateOriginalMethod(MethodInfo method)
         {
             uint oldProtect;
-            var needSize = NativeAPI.SizeofMin5Byte(srcPtr);
+            var needSize = LDasm.SizeofMin5Byte(srcPtr);
             byte[] src_instr = new byte[needSize];
             for (int i = 0; i < needSize; i++)
             {

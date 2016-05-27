@@ -26,7 +26,5 @@ namespace DotNetDetour
     {
         [DllImport("kernel32")]
         public static extern bool VirtualProtect(IntPtr lpAddress, uint dwSize, Protection flNewProtect, out uint lpflOldProtect);
-        [DllImport("AsmHelper")]
-        public unsafe static extern int SizeofMin5Byte(byte* inst);
     }
 }
