@@ -80,8 +80,8 @@
     <Compile Include="Samples.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\Desktop\ClrRuntimeHook\DotNetDetour.csproj">
-      <Project>{704f5f0a-ba77-4ecd-a497-f7c1f9c9ecc7}</Project>
+    <ProjectReference Include="..\DotNetDetour\DotNetDetour.csproj">
+      <Project>{900b35a0-c116-46e2-875a-9bab0c6d5a55}</Project>
       <Name>DotNetDetour</Name>
     </ProjectReference>
   </ItemGroup>
