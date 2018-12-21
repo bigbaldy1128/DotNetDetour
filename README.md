@@ -1,3 +1,5 @@
+
+[![Build Status](https://dev.azure.com/kissstudio/DotNetDetour/_apis/build/status/kissstudio.DotNetDetour?branchName=master)](https://dev.azure.com/kissstudio/DotNetDetour/_build/latest?definitionId=3?branchName=master)
 ## DotNetDetour
 DotNetDetour是一个用于.net方法hook的类库
 ##特点
