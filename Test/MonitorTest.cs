@@ -33,7 +33,7 @@ namespace Test
         public void SystemMethod()
         {
             ClrMethodHook.Install();
-            Assert.AreEqual("My_name_is_NetFrameworkDetour", File.ReadAllText("../../test"));
+            Assert.AreEqual("My_name_is_NetFrameworkDetour", File.ReadAllText("test"));
         }
 
         [TestMethod]
