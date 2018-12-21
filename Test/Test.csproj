@@ -85,6 +85,11 @@
       <Name>DotNetDetour</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="test">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>
