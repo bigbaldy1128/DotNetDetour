@@ -37,4 +37,12 @@ steps:
     versioningScheme: byPrereleaseNumber
     majorVersion: '$(Major)'
     minorVersion: '$(Minor)'
-    patchVersion: '$(Patch)'    
+    patchVersion: '$(Patch)'   
+
+- task: NuGetCommand@2
+  inputs:
+    command: push
+    nuGetFeedType: external
+    publishFeedCredentials: 'nuget'
+    versioningScheme: byEnvVar
+    versionEnvVar: Version     
