@@ -42,16 +42,5 @@ namespace DotNetDetour.DetourWays
             RuntimeHelpers.PrepareMethod(method.MethodHandle);
             *((ulong*)((uint*)method.MethodHandle.Value.ToPointer() + 2)) = (ulong)ptr;
         }
-
-        public override bool IsDetourInstalled()
-        {
-            byte[] v = new byte[jmp_inst.Length];
-            var idx = 0;
-            for (int i = 0; i < jmp_inst.Length; i++)
-            {
-                v[idx] = *(rawMethodPtr + idx);
-            }
-            return v.SequenceEqual(jmp_inst);
-        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using DotNetDetour;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -10,7 +11,7 @@ namespace Test
 {
     public class Computer
     {
-        
+
         public static string GetCpu()
         {
             return "Intel Core I7";
@@ -47,7 +48,7 @@ namespace Test
         {
             return "Not " + GetCpu();
         }
-        
+
         [ShadowMethod(typeof(Computer), "GetCpu")]
         public static string GetCpu()
         {
@@ -61,7 +62,7 @@ namespace Test
         {
             return "Not " + GetRAMSize();
         }
-        
+
         [ShadowMethod(typeof(Computer), "GetRAMSize")]
         public string GetRAMSize()
         {
@@ -82,7 +83,7 @@ namespace Test
 
         public string Os
         {
-            
+
             [ShadowMethod(typeof(Computer), "get_Os")]
             get
             {
@@ -99,7 +100,7 @@ namespace Test
             human = "Not " + human;
             return human;
         }
-        
+        [MethodImpl(MethodImplOptions.NoInlining)]
         [ShadowMethod(typeof(ComputerOf<string>), "ComputerIo")]
         public string ComputerIo(string owner)
         {
@@ -110,14 +111,22 @@ namespace Test
 
     public class NetFrameworkDetour : IMethodHook
     {
-        [RelocatedMethodAttribute(typeof(System.IO.File), "ReadAllText")]
+        [RelocatedMethod(typeof(System.IO.File), "ReadAllText")]
         public static string _impl_ReadAllText(string file)
         {
-            return ReadAllText(file) + "NetFrameworkDetour";
+            try
+            {
+                return ReadAllText(file) + "NetFrameworkDetour";
+            }
+            catch (Exception ex)
+            {
+                Debugger.Break();
+                throw;
+            }
         }
 
         [ShadowMethod(typeof(System.IO.File), "ReadAllText")]
-        
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static string ReadAllText(string file)
         {
             return null;

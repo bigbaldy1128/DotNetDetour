@@ -26,8 +26,8 @@ namespace DotNetDetour.DetourWays
         {
         }
 
-        public virtual bool Patch(MethodBase rawMethod/*要hook的目标函数*/,
-            MethodInfo customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/,
+        public virtual bool Patch(MethodBase rawMethod/*要hook的目标函数*/, 
+            MethodInfo customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/, 
             MethodInfo placeholder/*占位函数*/)
         {
             //确保jit过了
@@ -36,23 +36,26 @@ namespace DotNetDetour.DetourWays
 
             rawMethodPtr = (byte*)rawMethod.MethodHandle.GetFunctionPointer().ToPointer();
 
+            var customImplMethodPtr = (byte*)customImplMethod.MethodHandle.GetFunctionPointer().ToPointer();
+            //生成跳转指令，使用相对地址，用于跳转到用户定义函数
+            fixed (byte* newInstrPtr = newInstrs)
+            {
+                *(uint*)(newInstrPtr + 1) = (uint)customImplMethodPtr - (uint)rawMethodPtr - 5;
+            }
+
             //因测试项目的特殊性，确保测试项目代码不会重入
             if (IsDetourInstalled())
             {
                 return false;
             }
-            var customImplMethodPtr = (byte*)customImplMethod.MethodHandle.GetFunctionPointer().ToPointer();
+
             //将对占位函数的调用指向原函数，实现调用占位函数即调用原始函数的功能
             if (placeholder != null)
             {
                 MakePlacholderMethodCallPointsToRawMethod(placeholder);
             }
 
-            //生成跳转指令，使用相对地址，用于跳转到用户定义函数
-            fixed (byte* newInstrPtr = newInstrs)
-            {
-                *(uint*)(newInstrPtr + 1) = (uint)customImplMethodPtr - (uint)rawMethodPtr - 5;
-            }
+
             //并且将对原函数的调用指向跳转指令，以此实现将对原始目标函数的调用跳转到用户定义函数执行的目的
             Patch();
             return true;
@@ -98,8 +101,12 @@ namespace DotNetDetour.DetourWays
 
         public virtual bool IsDetourInstalled()
         {
-            return false;
-            //return *rawMethodPtr == 0xE9;
+            byte[] v = new byte[newInstrs.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                v[i] = *(rawMethodPtr + i);
+            }
+            return v.SequenceEqual(newInstrs);
         }
     }
 }
