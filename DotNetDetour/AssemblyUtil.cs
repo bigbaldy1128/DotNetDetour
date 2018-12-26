@@ -124,7 +124,7 @@ namespace DotNetDetour
         public static IEnumerable<TBaseInterface> GetImplementedObjectsByInterface<TBaseInterface>(this Assembly assembly, Type targetType)
             where TBaseInterface : class
         {
-            Type[] arrType = assembly.GetExportedTypes();
+            Type[] arrType = assembly.GetTypes();
 
             var result = new List<TBaseInterface>();
 

@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>DotNetDetour</id>
+    <id>kissstudio.DotNetDetour</id>
     <version>1.0.2.0</version>
-    <authors>bigbaldy</authors>
-    <owners>bigbaldy</owners>
+    <authors>kissstudio</authors>
+    <owners>kissstudio</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>dotnet hook库</description>
     <copyright>Copyright 2016</copyright>

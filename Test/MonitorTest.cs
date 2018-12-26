@@ -6,41 +6,41 @@ using System.IO;
 namespace Test
 {
     [TestClass]
-    public class MonitorTest
+    public class ThunkMethodTest
     {
         [TestMethod]
         public void StaticMethod()
         {
-            Monitor.Install();
-            Assert.AreEqual("BA", A.StaticMethod());
+            ClrMethodHook.Install();
+            Assert.AreEqual("Not Intel Core I7", Computer.GetCpu());
         }
 
         [TestMethod]
         public void InstanceMethod()
         {
-            Monitor.Install();
-            Assert.AreEqual("BA", new A().InstanceMethod());
+            ClrMethodHook.Install(AppDomain.CurrentDomain.BaseDirectory);
+            Assert.AreEqual("Not 512M", new Computer().GetRAMSize());
         }
 
         [TestMethod]
         public void PropertyMethod()
         {
-            Monitor.Install();
-            Assert.AreEqual("BA", new A().Property);
+            ClrMethodHook.Install(AppDomain.CurrentDomain.BaseDirectory);
+            Assert.AreEqual("Not Windows 10", new Computer().Os);
         }
 
         [TestMethod]
         public void SystemMethod()
         {
-            Monitor.Install();
-            Assert.AreEqual("BA", File.ReadAllText("../../test"));
+            ClrMethodHook.Install();
+            Assert.AreEqual("My_name_is_NetFrameworkDetour", File.ReadAllText("test"));
         }
 
         [TestMethod]
         public void GenericMethod()
         {
-            Monitor.Install();
-            Assert.AreEqual("BA", new A1<string>().GenericMethod("A"));
+            ClrMethodHook.Install(AppDomain.CurrentDomain.BaseDirectory);
+            Assert.AreEqual("Not Jack", new ComputerOf<string>().ComputerIo("Jack"));
         }
     }
 }

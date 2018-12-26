@@ -21,18 +21,18 @@ namespace DotNetDetour.DetourWays
             0xC2,0x08,0x00                                     //ret 8
         };
 
-        protected override void CreateOriginalMethod(MethodInfo method)
+        protected override void MakePlacholderMethodCallPointsToRawMethod(MethodInfo method)
         {
             uint oldProtect;
-            var needSize = LDasm.SizeofMin5Byte(srcPtr);
+            var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);
             byte[] src_instr = new byte[needSize];
             for (int i = 0; i < needSize; i++)
             {
-                src_instr[i] = srcPtr[i];
+                src_instr[i] = rawMethodPtr[i];
             }
             fixed (byte* p = &jmp_inst[3])
             {
-                *((ulong*)p) = (ulong)(srcPtr + needSize);
+                *((ulong*)p) = (ulong)(rawMethodPtr + needSize);
             }
             var totalLength = src_instr.Length + jmp_inst.Length;
             IntPtr ptr = Marshal.AllocHGlobal(totalLength);

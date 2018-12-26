@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DotNetDetour
 {
-    public interface IMethodMonitor
+    public interface IMethodHook
     {
     }
 }
