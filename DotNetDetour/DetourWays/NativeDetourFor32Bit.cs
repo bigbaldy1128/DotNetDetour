@@ -26,9 +26,9 @@ namespace DotNetDetour.DetourWays
         {
         }
 
-        public virtual bool Patch(MethodBase rawMethod/*要hook的目标函数*/, 
-            MethodInfo customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/, 
-            MethodInfo placeholder/*占位函数*/)
+        public virtual void Patch(MethodBase rawMethod/*要hook的目标函数*/,
+			MethodBase customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/,
+			MethodBase placeholder/*占位函数*/)
         {
             //确保jit过了
             var typeHandles = rawMethod.DeclaringType.GetGenericArguments().Select(t => t.TypeHandle).ToArray();
@@ -43,11 +43,6 @@ namespace DotNetDetour.DetourWays
                 *(uint*)(newInstrPtr + 1) = (uint)customImplMethodPtr - (uint)rawMethodPtr - 5;
             }
 
-            //因测试项目的特殊性，确保测试项目代码不会重入
-            if (IsDetourInstalled())
-            {
-                return false;
-            }
 
             //将对占位函数的调用指向原函数，实现调用占位函数即调用原始函数的功能
             if (placeholder != null)
@@ -58,7 +53,6 @@ namespace DotNetDetour.DetourWays
 
             //并且将对原函数的调用指向跳转指令，以此实现将对原始目标函数的调用跳转到用户定义函数执行的目的
             Patch();
-            return true;
         }
 
         protected virtual void Patch()
@@ -76,7 +70,7 @@ namespace DotNetDetour.DetourWays
         /// 将对placeholder的调用指向原函数
         /// </summary>
         /// <param name="placeholder"></param>
-        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodInfo placeholder)
+		protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase placeholder)
         {
             uint oldProtect;
             var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);
@@ -97,16 +91,6 @@ namespace DotNetDetour.DetourWays
             NativeAPI.VirtualProtect(ptr, (uint)total_length, Protection.PAGE_EXECUTE_READWRITE, out oldProtect);
             RuntimeHelpers.PrepareMethod(placeholder.MethodHandle);
             *((uint*)placeholder.MethodHandle.Value.ToPointer() + 2) = (uint)ptr;
-        }
-
-        public virtual bool IsDetourInstalled()
-        {
-            byte[] v = new byte[newInstrs.Length];
-            for (int i = 0; i < v.Length; i++)
-            {
-                v[i] = *(rawMethodPtr + i);
-            }
-            return v.SequenceEqual(newInstrs);
         }
     }
 }

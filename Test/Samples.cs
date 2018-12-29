@@ -11,6 +11,10 @@ namespace Test
 {
     public class Computer
     {
+		public string InitMsg;
+		public Computer() {
+			InitMsg = "Init";
+		}
 
         public static string GetCpu()
         {
@@ -43,28 +47,43 @@ namespace Test
     public class ComputerDetour : IMethodHook
     {
         #region 静态方法HOOK
-        [RelocatedMethodAttribute(typeof(Computer), "GetCpu")]
-        public static string _impl_GetCpu()
+        [RelocatedMethodAttribute("Test.Computer")]
+		public static string GetCpu()
         {
-            return "Not " + GetCpu();
+			return "Not " + GetCpu_Original();
         }
 
-        [ShadowMethod(typeof(Computer), "GetCpu")]
-        public static string GetCpu()
+        [ShadowMethod]
+		public static string GetCpu_Original()
         {
             return null;
         }
         #endregion
 
-        #region 实例方法
-        [RelocatedMethodAttribute(typeof(Computer), "GetRAMSize")]
-        public string _impl_GetRAMSize()
+		#region 构造方法
+		[RelocatedMethodAttribute("Test.Computer")]
+		public void Computer() {
+			Computer_Original();
+
+			var This = (Computer)(object)this;
+			This.InitMsg = "Hook " + This.InitMsg;
+		}
+
+		[ShadowMethod]
+		public void Computer_Original() {
+
+		}
+		#endregion
+
+		#region 实例方法
+		[RelocatedMethodAttribute(typeof(Computer), "GetRAMSize")]
+        public string Hook_GetRAMSize()
         {
-            return "Not " + GetRAMSize();
+			return "Not " + GetRAMSize_Original();
         }
 
-        [ShadowMethod(typeof(Computer), "GetRAMSize")]
-        public string GetRAMSize()
+        [ShadowMethod]
+		public string GetRAMSize_Original()
         {
             return null;
         }
@@ -72,62 +91,66 @@ namespace Test
 
 
         #region 实例属性
-        public string _impl_Os
-        {
-            [RelocatedMethodAttribute(typeof(Computer), "get_Os")]
-            get
-            {
-                return "Not " + Os;
-            }
-        }
-
         public string Os
         {
-
-            [ShadowMethod(typeof(Computer), "get_Os")]
+			[RelocatedMethodAttribute(typeof(Computer), "", "getOs")]
             get
             {
-                return null;
+				return "Not " + getOs();
             }
+        }
+		[ShadowMethod]
+		public string getOs()
+        {
+			return null;
         }
         #endregion
 
-        #region 泛型方法
-        [RelocatedMethodAttribute(typeof(ComputerOf<string>), "ComputerIo")]
-        public string _impl_ComputerIo(string name)
-        {
-            var human = ComputerIo(name);
-            human = "Not " + human;
-            return human;
-        }
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        [ShadowMethod(typeof(ComputerOf<string>), "ComputerIo")]
-        public string ComputerIo(string owner)
-        {
-            return null;
-        }
-        #endregion
+		#region 泛型方法
+		[RelocatedMethodAttribute(typeof(ComputerOf<string>))]
+		public string ComputerIo(string name) {
+			var human = "" + ComputerIo_Original(name);
+			human = "Not " + human;
+			return human;
+		}
+		[ShadowMethod]
+		public string ComputerIo_Original(string owner) {
+			return null;
+		}
+		#endregion
+
+		#region 泛型方法
+		[RelocatedMethodAttribute(typeof(ComputerOf<Computer>))]
+		public Computer ComputerIo(Computer val) {
+			var human = ComputerIo_Original(val);
+			val.InitMsg = "ComputerIo Computer";
+			return human;
+		}
+		[ShadowMethod]
+		public Computer ComputerIo_Original(Computer owner) {
+			return null;
+		}
+		#endregion
     }
 
     public class NetFrameworkDetour : IMethodHook
     {
-        [RelocatedMethod(typeof(System.IO.File), "ReadAllText")]
-        public static string _impl_ReadAllText(string file)
+		[RelocatedMethod("System.IO.File")]
+        public static string ReadAllText(string file)
         {
             try
             {
-                return ReadAllText(file) + "NetFrameworkDetour";
+				return ReadAllText_Original(file) + "NetFrameworkDetour";
             }
-            catch (Exception ex)
+            catch
             {
                 Debugger.Break();
                 throw;
             }
         }
 
-        [ShadowMethod(typeof(System.IO.File), "ReadAllText")]
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static string ReadAllText(string file)
+        [ShadowMethod]
+		public static string ReadAllText_Original(string file)
         {
             return null;
         }
