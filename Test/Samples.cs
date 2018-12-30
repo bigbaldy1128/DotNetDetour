@@ -34,6 +34,9 @@ namespace Test
                 return "Windows 10";
             }
         }
+		public string Work(string msg) {
+			return msg + "(worked)";
+		}
 		public static string Any<T>(T val) {
 			return val.ToString();
 		}
@@ -104,12 +107,36 @@ namespace Test
 		}
 		#endregion
 
-		#region 实例方法（不实现ShadowMethod、方法名称和原方法名称不同）
-		[RelocatedMethodAttribute(typeof(Computer), "GetRAMSize")]
-		public string Hook_GetRAMSize() {
-			return "Hook";
+
+
+		#region 实例方法
+		[RelocatedMethodAttribute("Test.Computer")]
+		public string GetRAMSize() {
+			return "Hook " + GetRAMSize_Original();
+		}
+
+		[ShadowMethod]
+		public string GetRAMSize_Original() {
+			return null;
 		}
 		#endregion
+
+		#region 实例方法（不实现ShadowMethod、方法名称和原方法名称不同）
+		[RelocatedMethodAttribute(typeof(Computer), "Work", "WorkFn")]
+		public string XXXWork([RememberType("System.String")]int msg) {
+			return "Hook "+WorkFn(msg);
+		}
+
+		[ShadowMethod]
+		public object WorkFn(int msg) {//和上面方法参数签名一致即可正确匹配
+			return null;
+		}
+		[ShadowMethod]
+		public object WorkFn(string msg) {//超级干扰，这个方法是无效的
+			return null;
+		}
+		#endregion
+
 
 
 		#region 实例属性

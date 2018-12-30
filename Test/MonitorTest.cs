@@ -44,8 +44,13 @@ namespace Test
         public void InstanceMethod()
         {
             ClrMethodHook.Install();
-            Assert.AreEqual("Hook", new Computer().GetRAMSize());
+			Assert.AreEqual("Hook 512M", new Computer().GetRAMSize());
         }
+		[TestMethod]
+		public void InstanceMethod2() {
+			ClrMethodHook.Install();
+			Assert.AreEqual("Hook 土豆(worked)", new Computer().Work("土豆"));
+		}
 
         [TestMethod]
         public void PropertyMethod()
