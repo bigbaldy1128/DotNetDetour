@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Threading;
 using System.Linq.Expressions;
 using System.IO;
+using System.Diagnostics;
 
 namespace DotNetDetour.DetourWays
 {
@@ -52,7 +53,9 @@ namespace DotNetDetour.DetourWays
 
 
             //并且将对原函数的调用指向跳转指令，以此实现将对原始目标函数的调用跳转到用户定义函数执行的目的
-            Patch();
+			Patch();
+
+			Debug.WriteLine("Patch: Point=" + rawMethod.MethodHandle.GetFunctionPointer().ToInt64() + " Method=" + rawMethod + " Type=" + rawMethod.ReflectedType.FullName);
         }
 
         protected virtual void Patch()

@@ -37,6 +37,7 @@ namespace DotNetDetour
 
         /// <summary>
 		/// 标记要hook的目标类型中的指定方法。
+		/// 类型名称为完全限定名，如果是泛型可以提供type`1[[System.Int32]]这种完整形式。
 		/// 方法名称targetMethodName可以不提供，默认取当前方法名称。
 		/// 如果提供ShadowMethod时，ShadowMethod名称应当为“原始目标方法名_Original”，如果使用其他名称，应当设置shadowMethodName。
         /// </summary>

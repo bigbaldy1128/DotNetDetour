@@ -31,16 +31,19 @@ namespace DotNetDetour
 
 		public ShadowMethodAttribute() { }
     }
-    /// <summary>
-    /// 标记函数私有类型参数(此参数类型用object代替)，并指明其具体私有类型名称
+	/// <summary>
+	/// 标记函数的泛型参数或私有类型参数。
+	/// 私有类型要指明其完全限定名，如：System.Int32、type`1[[System.Int32]]这种完整形式。
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter)]
     public class RememberTypeAttribute : Attribute
     {
-        public RememberTypeAttribute(string fullName)
+		public RememberTypeAttribute(string fullName = null, bool isGeneric=false)
         {
-            this.FullName = fullName;
+            TypeFullNameOrNull = fullName;
+			IsGeneric = isGeneric;
         }
-        public string FullName { get; private set; }
+		public string TypeFullNameOrNull { get; private set; }
+		public bool IsGeneric { get; private set; }
     }
 }
