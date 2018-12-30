@@ -73,7 +73,7 @@ var msg=new SolidClass().Run("Hello World!");
 
 
 #### `RelocatedMethodAttribute`(`type`,`targetMethodName`,`shadowMethodName`)注解
-支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List`1[[System.String]]`。
+支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List&#96;1[[System.String]]`。
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
 public string MyMethod(string param){...}
@@ -107,17 +107,17 @@ public string SolidMethod_Original(object data, int code){
 #### 给我们的Hook方法传递参数
 我们编写Hook方法是在被Hook的原始方法被调用时才会执行的，我们可能无法修改调用过程的参数（如果是能的方法修跳过此节），虽然我们编写的Hook方法可以是非静态方法，但我们应当把它当静态方法来看待，虽然可以用属性字段（非静态的也当做静态）之类的给我们的Hook方法传递数据，但如果遇到并发，是不可靠的。
 
-我们可以通过当前线程相关的上下文来传递数据，比如：HttpContext、CallContext、AsyncLocal、ThreadLoacl。推荐使用CallContext.LogicalSetData来传递数据，如果可以用HttpContext就更好了（底层也是用CallContext.HostContext来实现的）。ThreadLoacl只能当前线程用，遇到异步、多线程就不行了。AsyncLocal当然是最好的，但稍微低些版本的.Net Framework还没有这个。
+我们可以通过当前线程相关的上下文来传递数据，比如：`HttpContext`、`CallContext`、`AsyncLocal`、`ThreadLoacl`。推荐使用`CallContext.LogicalSetData`来传递数据，如果可以用`HttpContext`就更好了（底层也是用`CallContext.HostContext`来实现的）。`ThreadLoacl`只能当前线程用，遇到异步、多线程就不行了。`AsyncLocal`当然是最好的，但稍微低些版本的.Net Framework还没有这个。
 
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
 public string MyMethod(string param){
-	if (CallContext.LogicalGetData("key") == (object)"value") {
-		//执行特定Hook代码
-		return;
-	}
-	//执行其他Hook代码
-	...
+    if (CallContext.LogicalGetData("key") == (object)"value") {
+        //执行特定Hook代码
+        return;
+    }
+    //执行其他Hook代码
+    ...
 }
 
 //调用
