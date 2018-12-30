@@ -28,8 +28,8 @@ namespace DotNetDetour.DetourWays
         }
 
         public virtual void Patch(MethodBase rawMethod/*要hook的目标函数*/,
-			MethodBase customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/,
-			MethodBase placeholder/*占位函数*/)
+            MethodBase customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/,
+            MethodBase placeholder/*占位函数*/)
         {
             //确保jit过了
             var typeHandles = rawMethod.DeclaringType.GetGenericArguments().Select(t => t.TypeHandle).ToArray();
@@ -53,9 +53,9 @@ namespace DotNetDetour.DetourWays
 
 
             //并且将对原函数的调用指向跳转指令，以此实现将对原始目标函数的调用跳转到用户定义函数执行的目的
-			Patch();
+            Patch();
 
-			Debug.WriteLine("Patch: Point=" + rawMethod.MethodHandle.GetFunctionPointer().ToInt64() + " Method=" + rawMethod + " Type=" + rawMethod.ReflectedType.FullName);
+            Debug.WriteLine("Patch: Point=" + rawMethod.MethodHandle.GetFunctionPointer().ToInt64() + " Method=" + rawMethod + " Type=" + rawMethod.ReflectedType.FullName);
         }
 
         protected virtual void Patch()
@@ -73,7 +73,7 @@ namespace DotNetDetour.DetourWays
         /// 将对placeholder的调用指向原函数
         /// </summary>
         /// <param name="placeholder"></param>
-		protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase placeholder)
+        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase placeholder)
         {
             uint oldProtect;
             var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);

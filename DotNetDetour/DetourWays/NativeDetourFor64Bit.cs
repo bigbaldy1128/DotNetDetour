@@ -21,7 +21,7 @@ namespace DotNetDetour.DetourWays
             0xC2,0x08,0x00                                     //ret 8
         };
 
-		protected override void MakePlacholderMethodCallPointsToRawMethod(MethodBase method)
+        protected override void MakePlacholderMethodCallPointsToRawMethod(MethodBase method)
         {
             uint oldProtect;
             var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);

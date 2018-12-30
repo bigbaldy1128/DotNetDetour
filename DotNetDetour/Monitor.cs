@@ -14,22 +14,22 @@ namespace DotNetDetour
         /// <summary>
         /// 代理方法
         /// </summary>
-		public MethodBase RelocatedMethod { get; set; }
+        public MethodBase RelocatedMethod { get; set; }
 
         /// <summary>
         /// 目标方法的影子方法
         /// </summary>
-		public MethodBase ShadowMethod { get; set; }
+        public MethodBase ShadowMethod { get; set; }
 
-		public IMethodHook Obj;
+        public IMethodHook Obj;
     }
 
-	[Obsolete("此类已变更为ClrMethodHook")]
-	public class Monitor : ClrMethodHook {}
+    [Obsolete("此类已变更为ClrMethodHook")]
+    public class Monitor : ClrMethodHook {}
 
     public class ClrMethodHook
     {
-		static public BindingFlags AllFlag = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
+        static public BindingFlags AllFlag = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
         static bool installed = false;
         static List<DestAndOri> destAndOris = new List<DestAndOri>();
         /// <summary>
@@ -58,27 +58,27 @@ namespace DotNetDetour
                             .SelectMany(d => d.GetImplementedObjectsByInterface<IMethodHook>());
             }
 
-			foreach (var monitor in monitors) {
-				var all = monitor.GetType().GetMethods(AllFlag);
-				var relocatedMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute)));
-				var shadowMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))).ToArray();
+            foreach (var monitor in monitors) {
+                var all = monitor.GetType().GetMethods(AllFlag);
+                var relocatedMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute)));
+                var shadowMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))).ToArray();
 
-				var destCount = relocatedMethods.Count();
-				foreach (var relocated in relocatedMethods) {
-					DestAndOri destAndOri = new DestAndOri();
-					destAndOri.Obj = monitor;
-					destAndOri.RelocatedMethod = relocated;
-					if (destCount == 1) {
-						destAndOri.ShadowMethod = shadowMethods.FirstOrDefault();
-					} else {
-						var shadowName = relocated.GetCustomAttribute<RelocatedMethodAttribute>().GetShadowMethodName(relocated);
+                var destCount = relocatedMethods.Count();
+                foreach (var relocated in relocatedMethods) {
+                    DestAndOri destAndOri = new DestAndOri();
+                    destAndOri.Obj = monitor;
+                    destAndOri.RelocatedMethod = relocated;
+                    if (destCount == 1) {
+                        destAndOri.ShadowMethod = shadowMethods.FirstOrDefault();
+                    } else {
+                        var shadowName = relocated.GetCustomAttribute<RelocatedMethodAttribute>().GetShadowMethodName(relocated);
 
-						destAndOri.ShadowMethod = FindMethod(shadowMethods, shadowName, relocated, assemblies);
-					}
+                        destAndOri.ShadowMethod = FindMethod(shadowMethods, shadowName, relocated, assemblies);
+                    }
 
-					destAndOris.Add(destAndOri);
-				}
-			}
+                    destAndOris.Add(destAndOri);
+                }
+            }
 
             InstallInternal(true, assemblies);
             AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
@@ -88,138 +88,138 @@ namespace DotNetDetour
         {
             foreach (var detour in destAndOris)
             {
-				var relocatedMethod = detour.RelocatedMethod;
-				var relocatedAttribute = relocatedMethod.GetCustomAttribute<RelocatedMethodAttribute>();
+                var relocatedMethod = detour.RelocatedMethod;
+                var relocatedAttribute = relocatedMethod.GetCustomAttribute<RelocatedMethodAttribute>();
 
-				//获取当前程序集中的基础类型
-				var typeName = relocatedAttribute.TargetTypeFullName;
-				if (relocatedAttribute.TargetType != null) {
-					typeName = relocatedAttribute.TargetType.FullName;
-				}
-				var type = TypeResolver(typeName, assemblies);
-				if (type != null && !assemblies.Contains(type.Assembly)) {
-					type = null;
-				}
+                //获取当前程序集中的基础类型
+                var typeName = relocatedAttribute.TargetTypeFullName;
+                if (relocatedAttribute.TargetType != null) {
+                    typeName = relocatedAttribute.TargetType.FullName;
+                }
+                var type = TypeResolver(typeName, assemblies);
+                if (type != null && !assemblies.Contains(type.Assembly)) {
+                    type = null;
+                }
 
-				//获取方法
-				var methodName = relocatedAttribute.GetTargetMethodName(relocatedMethod);
-				MethodBase rawMethod = null;
-				if (type != null) {
-					MethodBase[] methods;
+                //获取方法
+                var methodName = relocatedAttribute.GetTargetMethodName(relocatedMethod);
+                MethodBase rawMethod = null;
+                if (type != null) {
+                    MethodBase[] methods;
 
-					if (methodName == type.Name || methodName == ".ctor") {//构造方法
-						methods = type.GetConstructors(AllFlag);
-						methodName = ".ctor";
-					} else {
-						methods = type.GetMethods(AllFlag);
-					}
+                    if (methodName == type.Name || methodName == ".ctor") {//构造方法
+                        methods = type.GetConstructors(AllFlag);
+                        methodName = ".ctor";
+                    } else {
+                        methods = type.GetMethods(AllFlag);
+                    }
 
-					rawMethod = FindMethod(methods, methodName, relocatedMethod, assemblies);
-				}
-				if (rawMethod != null && rawMethod.IsGenericMethod) {
-					//泛型方法转成实际方法
-					rawMethod = ((MethodInfo)rawMethod).MakeGenericMethod(relocatedMethod.GetParameters().Select(o => {
-						var rt = o.ParameterType;
-						var attr = o.GetCustomAttribute<RememberTypeAttribute>();
-						if (attr != null && attr.TypeFullNameOrNull != null) {
-							rt = TypeResolver(attr.TypeFullNameOrNull, assemblies);
-						}
-						return rt;
-					}).ToArray());
-				}
+                    rawMethod = FindMethod(methods, methodName, relocatedMethod, assemblies);
+                }
+                if (rawMethod != null && rawMethod.IsGenericMethod) {
+                    //泛型方法转成实际方法
+                    rawMethod = ((MethodInfo)rawMethod).MakeGenericMethod(relocatedMethod.GetParameters().Select(o => {
+                        var rt = o.ParameterType;
+                        var attr = o.GetCustomAttribute<RememberTypeAttribute>();
+                        if (attr != null && attr.TypeFullNameOrNull != null) {
+                            rt = TypeResolver(attr.TypeFullNameOrNull, assemblies);
+                        }
+                        return rt;
+                    }).ToArray());
+                }
 
-				if (rawMethod == null)
+                if (rawMethod == null)
                 {
-					if (isInstall) {
-						Debug.WriteLine("没有找到与试图Hook的方法\"{0}, {1}\"匹配的目标方法.", new object[] { relocatedMethod.ReflectedType.FullName, relocatedMethod });
-					}
+                    if (isInstall) {
+                        Debug.WriteLine("没有找到与试图Hook的方法\"{0}, {1}\"匹配的目标方法.", new object[] { relocatedMethod.ReflectedType.FullName, relocatedMethod });
+                    }
                     continue;
-				}
-				if (detour.Obj is IMethodHookWithSet) {
-					((IMethodHookWithSet)detour.Obj).HookMethod(rawMethod);
-				}
+                }
+                if (detour.Obj is IMethodHookWithSet) {
+                    ((IMethodHookWithSet)detour.Obj).HookMethod(rawMethod);
+                }
 
                 var shadowMethod = detour.ShadowMethod;
                 var engine = DetourFactory.CreateDetourEngine();
-				engine.Patch(rawMethod, relocatedMethod, shadowMethod);
+                engine.Patch(rawMethod, relocatedMethod, shadowMethod);
 
-				Debug.WriteLine("已将目标方法 \"{0}, {1}\" 的调用指向 \"{2}, {3}\" Shadow: \"{4}\".", rawMethod.ReflectedType.FullName, rawMethod
-					, relocatedMethod.ReflectedType.FullName, relocatedMethod
-					, shadowMethod == null ? " (无)" : shadowMethod.ToString());
+                Debug.WriteLine("已将目标方法 \"{0}, {1}\" 的调用指向 \"{2}, {3}\" Shadow: \"{4}\".", rawMethod.ReflectedType.FullName, rawMethod
+                    , relocatedMethod.ReflectedType.FullName, relocatedMethod
+                    , shadowMethod == null ? " (无)" : shadowMethod.ToString());
             }
         }
 
-		private static Type TypeResolver(string typeName, Assembly[] assemblies) {
-			return Type.GetType(typeName, null, (a, b, c) => {
-				Type rt;
-				if (a != null) {
-					rt = a.GetType(b);
-					if (rt != null) {
-						return rt;
-					}
-				}
-				rt = Type.GetType(b);
-				if (rt != null) {
-					return rt;
-				}
-				foreach (var asm in assemblies) {
-					rt = asm.GetType(b);
-					if (rt != null) {
-						return rt;
-					}
-				}
-				return null;
-			});
-		}
-		//查找匹配函数
-		private static MethodBase FindMethod(MethodBase[] methods, string name, MethodBase like, Assembly[] assemblies) {
-			var likeParams = like.GetParameters();
-			foreach (var item in methods) {
-				if (item.Name != name) {
-					continue;
-				}
+        private static Type TypeResolver(string typeName, Assembly[] assemblies) {
+            return Type.GetType(typeName, null, (a, b, c) => {
+                Type rt;
+                if (a != null) {
+                    rt = a.GetType(b);
+                    if (rt != null) {
+                        return rt;
+                    }
+                }
+                rt = Type.GetType(b);
+                if (rt != null) {
+                    return rt;
+                }
+                foreach (var asm in assemblies) {
+                    rt = asm.GetType(b);
+                    if (rt != null) {
+                        return rt;
+                    }
+                }
+                return null;
+            });
+        }
+        //查找匹配函数
+        private static MethodBase FindMethod(MethodBase[] methods, string name, MethodBase like, Assembly[] assemblies) {
+            var likeParams = like.GetParameters();
+            foreach (var item in methods) {
+                if (item.Name != name) {
+                    continue;
+                }
 
-				var paramArr = item.GetParameters();
-				var len = paramArr.Count();
-				if (len != likeParams.Count()) {
-					continue;
-				}
+                var paramArr = item.GetParameters();
+                var len = paramArr.Count();
+                if (len != likeParams.Count()) {
+                    continue;
+                }
 
-				for (var i = 0; i < len; i++) {
-					var t1 = likeParams[i];
-					var t2 = paramArr[i];
-					//类型相同 或者 fullname都为null的泛型参数
-					if (t1.ParameterType.FullName == t2.ParameterType.FullName) {
-						continue;
-					}
+                for (var i = 0; i < len; i++) {
+                    var t1 = likeParams[i];
+                    var t2 = paramArr[i];
+                    //类型相同 或者 fullname都为null的泛型参数
+                    if (t1.ParameterType.FullName == t2.ParameterType.FullName) {
+                        continue;
+                    }
 
-					//手动保持的类型
-					var rmtype = t1.GetCustomAttribute<RememberTypeAttribute>();
-					if (rmtype != null) {
-						//泛型参数
-						if (rmtype.IsGeneric && t2.ParameterType.FullName == null) {
-							continue;
-						}
-						//查找实际类型
-						if (rmtype.TypeFullNameOrNull != null) {
-							if (rmtype.TypeFullNameOrNull == t2.ParameterType.FullName) {
-								continue;
-							}
+                    //手动保持的类型
+                    var rmtype = t1.GetCustomAttribute<RememberTypeAttribute>();
+                    if (rmtype != null) {
+                        //泛型参数
+                        if (rmtype.IsGeneric && t2.ParameterType.FullName == null) {
+                            continue;
+                        }
+                        //查找实际类型
+                        if (rmtype.TypeFullNameOrNull != null) {
+                            if (rmtype.TypeFullNameOrNull == t2.ParameterType.FullName) {
+                                continue;
+                            }
 
-							var type = TypeResolver(rmtype.TypeFullNameOrNull, assemblies);
-							if (type == t2.ParameterType) {
-								continue;
-							}
-						}
-					}
-					goto next;
-				}
-				return item;
-			next:
-				continue;
-			}
-			return null;
-		}
+                            var type = TypeResolver(rmtype.TypeFullNameOrNull, assemblies);
+                            if (type == t2.ParameterType) {
+                                continue;
+                            }
+                        }
+                    }
+                    goto next;
+                }
+                return item;
+            next:
+                continue;
+            }
+            return null;
+        }
 
         private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
         {

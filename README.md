@@ -17,29 +17,29 @@ DotNetDetour是一个用于.net方法hook的类库
 2. 参考以下例子实现`IMethodHook`接口，使用特性标记要Hook的方法
 ``` C#
 namespace Test.Solid {
-	//假设有一个已存在的类（并且无法修改源码，如.Net框架的方法）
-	public class SolidClass{
-		public string Run(string msg){
-			return msg+"(run)";
-		}
-	}
+    //假设有一个已存在的类（并且无法修改源码，如.Net框架的方法）
+    public class SolidClass{
+        public string Run(string msg){
+            return msg+"(run)";
+        }
+    }
 }
 
 namespace Test{
-	//我们自行实现一个类来修改Run方法的行为，此类用IMethodHook接口修饰
-	public class MyClass:IMethodHook{
-		//我们实现一个新Run方法，并标记为RelocatedMethodAttribute，覆盖SolidClass中的Run方法
-		[RelocatedMethodAttribute("Test.Solid.SolidClass")]
-		public string Run(string msg){
-			return "Hook " + Run_Original(msg);
-		}
-		
-		//实现一个占位影子方法，此方法代表被Hook覆盖的原始方法
-		[ShadowMethod]
-		public string Run_Original(string msg){
-			return null; //这里写什么无所谓，能编译过即可
-		}
-	}
+    //我们自行实现一个类来修改Run方法的行为，此类用IMethodHook接口修饰
+    public class MyClass:IMethodHook{
+        //我们实现一个新Run方法，并标记为RelocatedMethodAttribute，覆盖SolidClass中的Run方法
+        [RelocatedMethodAttribute("Test.Solid.SolidClass")]
+        public string Run(string msg){
+            return "Hook " + Run_Original(msg);
+        }
+        
+        //实现一个占位影子方法，此方法代表被Hook覆盖的原始方法
+        [ShadowMethod]
+        public string Run_Original(string msg){
+            return null; //这里写什么无所谓，能编译过即可
+        }
+    }
 }
 ```
 
@@ -104,13 +104,13 @@ public string SolidMethod_Original(object data, int code){
 或者在get块上方进行注解，规则和普通方法一致：
 ``` C#
 public string MyProperty{
-	[RelocatedMethodAttribute("Namespace.xxx.MyClass")]
-	get{ ... }
+    [RelocatedMethodAttribute("Namespace.xxx.MyClass")]
+    get{ ... }
 }
 
 public string MyProperty_Original{
-	[ShadowMethod]
-	get{ ... }
+    [ShadowMethod]
+    get{ ... }
 }
 ```
 
@@ -146,11 +146,11 @@ public int MyMethod(int param, object param2) {
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass`1[[System.Object]]")]
 public object MyMethod(object param, object param2) {
-	if(param is string){
-		... //string 实现代码
-	} else if(param is xxxx){
-		... //其他引用类型实现代码
-	}
+    if(param is string){
+        ... //string 实现代码
+    } else if(param is xxxx){
+        ... //其他引用类型实现代码
+    }
 ```
 
 
