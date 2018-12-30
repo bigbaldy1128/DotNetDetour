@@ -65,6 +65,13 @@ var msg=new SolidClass().Run("Hello World!");
 
 静态和非静态的普通方法Hook操作都是一模一样的，编写普通Hook方法，用`RelocatedMethodAttribute`注解标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
 
+
+#### `IMethodHook`接口
+我们编写的Hook方法所在的类需要实现`IMethodHook`接口，此接口是一个空接口，用于快速的查找Hook方法。
+
+或者使用`IMethodHookWithSet`接口(算Plus版吧)，此接口带一个`HookMethod(MethodBase method)`方法，这个类每成功进行一个Hook的初始化，就会传入被Hook的原始方法（可判断方法名称来确定是初始化的哪个方法），这个方法可用于获取方法所在的类（如：非公开类），可用于简化后续的反射操作；注意：此方法应当当做静态方法来进行编码。
+
+
 #### `RelocatedMethodAttribute`(`type`,`targetMethodName`,`shadowMethodName`)注解
 支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List`1[[System.String]]`。
 ``` C#
@@ -96,6 +103,31 @@ public string MyMethod([RememberType("Namespace.xxx.MyClass")]object data, int c
 [ShadowMethod]
 public string SolidMethod_Original(object data, int code){
 ```
+
+#### 给我们的Hook方法传递参数
+我们编写Hook方法是在被Hook的原始方法被调用时才会执行的，我们可能无法修改调用过程的参数（如果是能的方法修跳过此节），虽然我们编写的Hook方法可以是非静态方法，但我们应当把它当静态方法来看待，虽然可以用属性字段（非静态的也当做静态）之类的给我们的Hook方法传递数据，但如果遇到并发，是不可靠的。
+
+我们可以通过当前线程相关的上下文来传递数据，比如：HttpContext、CallContext、AsyncLocal、ThreadLoacl。推荐使用CallContext.LogicalSetData来传递数据，如果可以用HttpContext就更好了（底层也是用CallContext.HostContext来实现的）。ThreadLoacl只能当前线程用，遇到异步、多线程就不行了。AsyncLocal当然是最好的，但稍微低些版本的.Net Framework还没有这个。
+
+``` C#
+[RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
+public string MyMethod(string param){
+	if (CallContext.LogicalGetData("key") == (object)"value") {
+		//执行特定Hook代码
+		return;
+	}
+	//执行其他Hook代码
+	...
+}
+
+//调用
+CallContext.LogicalSetData("key", "value");
+new MyClass().MyMethod("");
+CallContext.LogicalSetData("key", null);
+```
+
+注：虽然大部分多线程、异步环境下调用上下文是会被正确复制传递的，但如果那里使用了ConfigeAwait(false)或者其他影响上下文的操作（定时回调、部分异步IO回调好像也没有），当我们的Hook方法执行时，可能上下文数据并没有传递进来。
+
 
 
 ### 属性Hook
