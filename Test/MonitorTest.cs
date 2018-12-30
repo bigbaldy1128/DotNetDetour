@@ -59,6 +59,7 @@ namespace Test
 			ClrMethodHook.Install();
 
 			Assert.AreEqual("Hook<int> 123", Computer.Any<int>(123));
+			//引用类型的没法正确hook，不知道啥原因
 			//Assert.AreEqual("Hook<string> str", Computer.Any<string>("str"));
 		}
 

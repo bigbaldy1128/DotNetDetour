@@ -153,7 +153,7 @@ namespace Test
 
 
 
-		#region 泛型方法，每种使用到的类型都单独实现
+		#region 【不支持】泛型方法<引用类型>，每种使用到的类型都单独实现，如：string，object。引用类型的泛型方法无法正确Hook，原因不明
 		[RelocatedMethodAttribute("Test.Computer")]
 		public static string Any([RememberType(isGeneric: true)]string val) {
 			return "Hook<string> " + Any_Original(val);
@@ -164,7 +164,7 @@ namespace Test
 		}
 		#endregion
 
-		#region 泛型方法，每种使用到的类型都单独实现
+		#region 泛型方法<值类型>，每种使用到的类型都单独实现，如：int、bool
 		[RelocatedMethodAttribute("Test.Computer")]
 		public static string Any([RememberType(isGeneric: true)]int val) {
 			return "Hook<int> " + Any_Original(val);
