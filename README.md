@@ -181,3 +181,23 @@ vs的测试功能会启动一个执行引擎，其默认选项是复用执行引
 从菜单关闭该选项Test->Test Settings ->Keep Test Execution Engine Running，即可解除此影响。
 
 另外调试测试是不能得出正确的结果的，可能是汇编代码不能在调试模式下工作。
+
+
+
+## 老版本兼容
+
+自bigbaldy1128 `2016-5`开源此项目后，到`2018-12` kissstudio 和 xiangyuecn 升级了此项目代码，把相关代码方式升级和合理化了一番(参考 [#4](https://github.com/bigbaldy1128/DotNetDetour/issues/4) [#5](https://github.com/bigbaldy1128/DotNetDetour/issues/5) )。
+
+已对3个主要的方法都进行了变更：
+
+1. `Monitor` -> `ClrMethodHook`
+2. `MonitorAttribute` -> `RelocatedMethodAttribute`
+    1. `MonitorAttribute(string NamespaceName, string ClassName)` -> `RelocatedMethodAttribute(string targetTypeFullName, string targetMethodName = null, string shadowMethodName = null)`
+    2. `MonitorAttribute(Type type)` -> `RelocatedMethodAttribute(Type targetType, string targetMethodName = null, string shadowMethodName = null)`
+3. `OriginalAttribute` -> `ShadowMethodAttribute`
+
+这3个变更都是兼容的，但不推荐继续使用老方法，并且将来可能会从类库里面移除。
+
+另外已废弃`ShadowMethodAttribute`中两个带参数的构造方法，已不兼容：
+1. `ShadowMethodAttribute(string targetTypeName, string methodName)`
+2. `ShadowMethodAttribute(Type classType, string methodName)`
