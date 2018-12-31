@@ -129,6 +129,11 @@ CallContext.LogicalSetData("key", null);
 注：虽然大部分多线程、异步环境下调用上下文是会被正确复制传递的，但如果哪里使用了`ConfigeAwait(false)`或者其他影响上下文的操作（定时回调、部分异步IO回调好像也没有传递），当我们的Hook方法执行时，可能上下文数据并没有传递进来。
 
 
+## 异步方法Hook
+异步方法Hook方法需要用async来修饰、返回Task类型，其他和普通方法Hook没有区别。
+
+小提醒：不要在存在SynchronizationContext(如：HttpContext、UI线程)的线程环境中直接在同步方法中调用异步方法，[真发生异步行为时100%死锁](https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html)，可以强制关闭SynchronizationContext来规避此种问题，但会引发一系列问题。
+
 
 ## 属性Hook
 属性其实是`get_xxx()`名称的普通方法，比如`MyProperty`属性Hook `get_MyProperty()`这个普通方法即可。
@@ -167,14 +172,14 @@ public void MyClass(string param) {
 ```
 
 
-## 泛型类
+## 泛型类的方法Hook
 
 形如`class MyClass<T>{ T MyMethod(T param, object param2){...}  }`这种类型内的方法Hook。泛型类中方法的Hook和普通方法Hook没有多大区别，只是在提供`RelocatedMethodAttribute`注解`type`参数时需要对类型具体化，比如调用的地方使用的是int类型，那么我们就Hook int类型的此类：`typeof(MyClass<int>)`、`Namespace.xxx.MyClass&#96;1[[System.Int32]]`，其他和普通方法规则相同。
 
 由于存在`引用类型`和`值类型`两种类型，并且表现不一致，我们在具体化时要分开对待。
 
 ### 值类型泛型参数
-每种使用到的值类型泛型参数的具体类型都需要单独实现Hook，`int`、`bool`等为值类型，如`int`类型写法：
+每种使用到的值类型泛型参数的具体类型都需要单独实现Hook，`int`、`bool`等为值类型都要单独实现，如`int`类型写法：
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass`1[[System.Int32]]")]
 public int MyMethod(int param, object param2) {
@@ -182,7 +187,7 @@ public int MyMethod(int param, object param2) {
 
 
 ### 引用类型泛型参数
-每种使用到引用类型参数的具体类型都共用一个Hook，**注意是：同一个泛型类中的同一个方法只能用一个相同方法进行Hook**，`string`、普通`object`等都是引用类型，如`string`类型写法：
+每种使用到引用类型参数的具体类型都共用一个Hook，**注意是：同一个泛型类中的同一个方法只能用一个相同方法进行Hook**，`string`、普通`object`等都是引用类型都共用一个Hook，如`string`类型写法：
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass`1[[System.Object]]")]
 public object MyMethod(object param, object param2) {
@@ -201,7 +206,7 @@ public object MyMethod(object param, object param2) {
 由于存在`引用类型`和`值类型`两种类型，并且表现不一致，我们在具体化时要分开对待。
 
 ### 值类型泛型参数
-每种使用到值类型泛型参数的都单独实现Hook，`int`、`bool`等为值类型，如int类型写法：
+每种使用到值类型泛型参数的都单独实现Hook，`int`、`bool`等为值类型都要单独实现，如int类型写法：
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass")]
 public int MyMethod([RememberType(isGeneric: true)]int param) {

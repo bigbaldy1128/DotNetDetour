@@ -37,8 +37,16 @@ namespace Test
         public string Work(string msg) {
             return msg + "(worked)";
         }
+        public async Task<string> WorkAsync(string msg) {
+            await Task.Delay(1);
+            return msg+"(workedAsync)";
+        }
         public static string Any<T>(T val) {
             return val.ToString();
+        }
+        public static async Task<string> AnyAsync<T>(T val) {
+            await Task.Delay(1);
+            return val.ToString()+"Async";
         }
 
 
@@ -72,6 +80,10 @@ namespace Test
     {
         public T ComputerIo(T owner)
         {
+            return owner;
+        }
+        public async Task<T> ComputerIoAsync(T owner) {
+            await Task.Delay(1);
             return owner;
         }
     }
@@ -137,6 +149,17 @@ namespace Test
         }
         #endregion
 
+        #region 异步实例方法
+        [RelocatedMethodAttribute(typeof(Computer))]
+        public async Task<string> WorkAsync(string msg) {
+            return "Hook " + await WorkAsync_Original(msg);
+        }
+        [ShadowMethod]
+        public async Task<string> WorkAsync_Original(string msg) {
+            await Task.Delay(1);
+            return null;
+        }
+        #endregion
 
 
         #region 实例属性
@@ -202,6 +225,18 @@ namespace Test
         }
         #endregion
 
+        #region 泛型方法<值类型>，每种使用到的类型都单独实现，如：int、bool
+        [RelocatedMethodAttribute("Test.Computer")]
+        public static async Task<string> AnyAsync([RememberType(isGeneric: true)]int val) {
+            return "Hook<int> " + await AnyAsync_Original(val);
+        }
+        [ShadowMethod]
+        public static async Task<string> AnyAsync_Original(int val) {
+            await Task.Delay(1);
+            return null;
+        }
+        #endregion
+
 
 
 
@@ -234,6 +269,18 @@ namespace Test
         }
         [ShadowMethod]
         public int ComputerIo_Original(int owner) {
+            return 0;
+        }
+        #endregion
+
+        #region 泛型类型<值类型>的方法，每种使用到的类型都单独实现，如：int、bool
+        [RelocatedMethodAttribute("Test.ComputerOf`1[[System.Int32]]")]
+        public async Task<int> ComputerIoAsync(int name) {
+            return await ComputerIoAsync_Original(name) + 1;
+        }
+        [ShadowMethod]
+        public async Task<int> ComputerIoAsync_Original(int owner) {
+            await Task.Delay(1);
             return 0;
         }
         #endregion
