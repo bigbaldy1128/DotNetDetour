@@ -135,7 +135,7 @@ CallContext.LogicalSetData("key", null);
 异步方法的Hook方法需要用async来修饰、返回Task类型，其他和普通方法Hook没有区别。
 
 小提醒：不要在存在SynchronizationContext(如：HttpContext、UI线程)的线程环境中直接在同步方法中调用异步方法，[真发生异步行为时100%死锁](https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html)，可以强制关闭SynchronizationContext来规避此种问题，但会引发一系列问题。**如果使用过程中发生死锁，跟我们进行的Hook操作没有关系**。
-```
+``` C#
 [RelocatedMethodAttribute(typeof(MyClass))]
 public async Task<int> MyMethodAsync() {...}
 
