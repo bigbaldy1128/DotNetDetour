@@ -63,17 +63,17 @@ var msg=new SolidClass().Run("Hello World!");
 
 ## 普通方法Hook
 
-静态和非静态的普通方法Hook操作都是一模一样的，编写普通Hook方法，用`RelocatedMethodAttribute`注解标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
+静态和非静态的普通方法Hook操作都是一模一样的，两步到位：新建一个类实现`IMethodHook`接口，编写普通Hook方法，用`RelocatedMethodAttribute`注解标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
 
 
-### `IMethodHook`接口
+### 第一步：新建一个类实现`IMethodHook`接口
 我们编写的Hook方法所在的类需要实现`IMethodHook`接口，此接口是一个空接口，用于快速的查找Hook方法。
 
 或者使用`IMethodHookWithSet`接口(算Plus版吧)，此接口带一个`HookMethod(MethodBase method)`方法，这个类每成功进行一个Hook的初始化，就会传入被Hook的原始方法（可判断方法名称来确定是初始化的哪个方法），这个方法可用于获取方法所在的类（如：私有类型），可用于简化后续的反射操作；注意：此方法应当当做静态方法来进行编码。
 
 
-### `RelocatedMethodAttribute`(`type`,`targetMethodName`,`shadowMethodName`)注解
-支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List&#96;1[[System.String]]`。
+### 第二步：编写Hook方法，用`RelocatedMethodAttribute`注解标记
+`RelocatedMethodAttribute`(`type`,`targetMethodName`,`shadowMethodName`) 支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List&#96;1[[System.String]]`。
 ``` C#
 [RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
 public string MyMethod(string param){...}
@@ -85,7 +85,7 @@ public string MyMethod(string param){...}
 
 如果我们提供目标原始方法的占位影子方法`ShadowMethod`，并且名称为`目标原始方法名称` `+` `_Original`，或者当前类内只有一个Hook方法，无需提供`shadowMethodName`参数。
 
-### 方法参数
+### 注意：方法参数
 参数签名要和被Hook的原始方法一致，如果不一致将导致无法找到原始方法（原因：存在重载方法无法确认是哪个的问题）。
 
 如果存在我们无法使用的参数类型的时候（如：私有类型），我们可以用object等其他类型代替此类型，并把此参数用`RememberType`进行标记：
@@ -97,14 +97,14 @@ public string SolidMethod(MyClass data, int code){...}
 public string MyMethod([RememberType("Namespace.xxx.MyClass")]object data, int code){...}
 ```
 
-### `ShadowMethodAttribute`注解原始方法
+### 可选：提供`ShadowMethodAttribute`注解的原始方法
 如果我们还想调用被Hook的原始方法，我们可以提供一个占位方法，此方法用`ShadowMethodAttribute`进行注解即可。此方法只起到代表原始方法的作用，不需要可以不提供，要求：参数签名必须和我们写的Hook方法一致（原因：存在重载方法无法确认是哪个的问题）；默认名称为`目标原始方法名称` `+` `_Original`，不使用这个名称也可以，但如果使用其他名称并且当前类中有多个Hook方法，必须在Hook方法`RelocatedMethodAttribute`注解中进行设置`shadowMethodName`进行关联。
 ``` C#
 [ShadowMethod]
 public string SolidMethod_Original(object data, int code){
 ```
 
-### 给我们的Hook方法传递参数
+### 可选：给我们的Hook方法传递参数
 我们编写Hook方法是在被Hook的原始方法被调用时才会执行的，我们可能无法修改调用过程的参数（如果是能修改方法的话就跳过此节），虽然我们编写的Hook方法可以是非静态方法，但我们应当把它当静态方法来看待，虽然可以用属性字段（非静态的也当做静态）之类的给我们的Hook方法传递数据，但如果遇到并发，是不可靠的。
 
 我们可以通过当前线程相关的上下文来传递数据，比如：`HttpContext`、`CallContext`、`AsyncLocal`、`ThreadLoacl`。推荐使用`CallContext.LogicalSetData`来传递数据，如果可以用`HttpContext`就更好了（底层也是用`CallContext.HostContext`来实现的）。`ThreadLoacl`只能当前线程用，遇到异步、多线程就不行了。`AsyncLocal`当然是最好的，但稍微低些版本的.Net Framework还没有这个。
