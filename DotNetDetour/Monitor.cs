@@ -60,8 +60,8 @@ namespace DotNetDetour
 
             foreach (var monitor in monitors) {
                 var all = monitor.GetType().GetMethods(AllFlag);
-                var relocatedMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute)));
-                var shadowMethods = all.Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))).ToArray();
+                var relocatedMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(RelocatedMethodAttribute).IsAssignableFrom(a.AttributeType)));
+                var shadowMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(ShadowMethodAttribute).IsAssignableFrom(a.AttributeType))).ToArray();
 
                 var destCount = relocatedMethods.Count();
                 foreach (var relocated in relocatedMethods) {

@@ -5,6 +5,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Test
 {
@@ -53,7 +54,13 @@ namespace Test
             Assert.AreEqual("Hook 土豆(worked)", new Computer().Work("土豆"));
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
-            Assert.AreEqual("Hook 土豆(workedAsync)", new Computer().WorkAsync("土豆").Result);
+            var bak = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
+            try {
+                Assert.AreEqual("Hook 土豆(workedAsync)", new Computer().WorkAsync("土豆").Result);
+            } finally {
+                SynchronizationContext.SetSynchronizationContext(bak);
+            }
         }
         [TestMethod]
         public async Task InstanceMethod2Async() {
@@ -77,7 +84,13 @@ namespace Test
 
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
-            Assert.AreEqual("Hook<int> 123Async", Computer.AnyAsync<int>(123).Result);
+            var bak = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
+            try {
+                Assert.AreEqual("Hook<int> 123Async", Computer.AnyAsync<int>(123).Result);
+            } finally {
+                SynchronizationContext.SetSynchronizationContext(bak);
+            }
         }
 
         [TestMethod]
@@ -91,7 +104,13 @@ namespace Test
             Assert.AreEqual(5, new ComputerOf<int>().ComputerIo(4));
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
-            Assert.AreEqual(5, new ComputerOf<int>().ComputerIoAsync(4).Result);
+            var bak = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(null);
+            try {
+                Assert.AreEqual(5, new ComputerOf<int>().ComputerIoAsync(4).Result);
+            } finally {
+                SynchronizationContext.SetSynchronizationContext(bak);
+            }
         }
 
 
