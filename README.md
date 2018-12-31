@@ -98,7 +98,9 @@ public string MyMethod([RememberType("Namespace.xxx.MyClass")]object data, int c
 ```
 
 ### 可选：提供`ShadowMethodAttribute`注解的原始方法
-如果我们还想调用被Hook的原始方法，我们可以提供一个占位方法，此方法用`ShadowMethodAttribute`进行注解即可。此方法只起到代表原始方法的作用，不需要可以不提供，要求：参数签名必须和我们写的Hook方法一致（原因：存在重载方法无法确认是哪个的问题）；默认名称为`目标原始方法名称` `+` `_Original`，不使用这个名称也可以，但如果使用其他名称并且当前类中有多个Hook方法，必须在Hook方法`RelocatedMethodAttribute`注解中进行设置`shadowMethodName`进行关联。
+如果我们还想调用被Hook的原始方法，我们可以提供一个占位方法，此方法用`ShadowMethodAttribute`进行注解即可。此方法只起到代表原始方法的作用，不需要可以不提供，要求：参数签名必须和我们写的Hook方法一致（原因：存在重载方法无法确认是哪个的问题）。
+
+默认名称为`目标原始方法名称` `+` `_Original`，不使用这个名称也可以，但如果使用其他名称并且当前类中有多个Hook方法，必须在Hook方法`RelocatedMethodAttribute`注解中进行设置`shadowMethodName`进行关联。
 ``` C#
 [ShadowMethod]
 public string SolidMethod_Original(object data, int code){
@@ -130,9 +132,25 @@ CallContext.LogicalSetData("key", null);
 
 
 ## 异步方法Hook
-异步方法Hook方法需要用async来修饰、返回Task类型，其他和普通方法Hook没有区别。
+异步方法的Hook方法需要用async来修饰、返回Task类型，其他和普通方法Hook没有区别。
 
-小提醒：不要在存在SynchronizationContext(如：HttpContext、UI线程)的线程环境中直接在同步方法中调用异步方法，[真发生异步行为时100%死锁](https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html)，可以强制关闭SynchronizationContext来规避此种问题，但会引发一系列问题。
+小提醒：不要在存在SynchronizationContext(如：HttpContext、UI线程)的线程环境中直接在同步方法中调用异步方法，[真发生异步行为时100%死锁](https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html)，可以强制关闭SynchronizationContext来规避此种问题，但会引发一系列问题。**如果使用过程中发生死锁，跟我们进行的Hook操作没有关系**。
+```
+[RelocatedMethodAttribute(typeof(MyClass))]
+public async Task<int> MyMethodAsync() {...}
+
+//异步环境调用
+val=await new MyClass().MyMethodAsync();
+
+//同步环境调用
+var bak = SynchronizationContext.Current;
+SynchronizationContext.SetSynchronizationContext(null);
+try {
+    val=new MyClass().MyMethodAsync().Result;
+} finally {
+    SynchronizationContext.SetSynchronizationContext(bak);
+}
+```
 
 
 ## 属性Hook
