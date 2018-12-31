@@ -90,19 +90,19 @@ namespace Test
 
     public class ComputerDetour : IMethodHook {
         #region 静态方法HOOK
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public static string GetCpu() {
             return "Not " + GetCpu_Original();
         }
 
-        [ShadowMethod]
+        [OriginalMethod]
         public static string GetCpu_Original() {
             return null;
         }
         #endregion
 
         #region 构造方法
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public void Computer() {
             Computer_Original();
 
@@ -113,7 +113,7 @@ namespace Test
             }
         }
 
-        [ShadowMethod]
+        [OriginalMethod]
         public void Computer_Original() {
 
         }
@@ -122,39 +122,39 @@ namespace Test
 
 
         #region 实例方法
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public string GetRAMSize() {
             return "Hook " + GetRAMSize_Original();
         }
 
-        [ShadowMethod]
+        [OriginalMethod]
         public string GetRAMSize_Original() {
             return null;
         }
         #endregion
 
-        #region 实例方法（不实现ShadowMethod、方法名称和原方法名称不同）
-        [RelocatedMethodAttribute(typeof(Computer), "Work", "WorkFn")]
+        #region 实例方法（不实现OriginalMethod、方法名称和原方法名称不同）
+        [HookMethod(typeof(Computer), "Work", "WorkFn")]
         public string XXXWork([RememberType("System.String")]int msg) {
             return "Hook "+WorkFn(msg);
         }
 
-        [ShadowMethod]
+        [OriginalMethod]
         public object WorkFn(int msg) {//和上面方法参数签名一致即可正确匹配
             return null;
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public object WorkFn(string msg) {//超级干扰，这个方法是无效的
             return null;
         }
         #endregion
 
         #region 异步实例方法
-        [RelocatedMethodAttribute(typeof(Computer))]
+        [HookMethod(typeof(Computer))]
         public async Task<string> WorkAsync(string msg) {
             return "Hook " + await WorkAsync_Original(msg);
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public async Task<string> WorkAsync_Original(string msg) {
             await Task.Delay(1);
             return null;
@@ -165,14 +165,14 @@ namespace Test
         #region 实例属性
         //public string get_Os(){...} 不封装成属性也可以
         public string Os {
-            [RelocatedMethodAttribute(typeof(Computer))]
+            [HookMethod(typeof(Computer))]
             get {
                 return "Not " + Os_Original;
             }
         }
         //public string get_Os_Original(){...} 不封装成属性也可以
         public string Os_Original {
-            [ShadowMethod]
+            [OriginalMethod]
             get {
                 return null;
             }
@@ -185,13 +185,13 @@ namespace Test
 
 
         #region 带私有+内部类型的方法
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         private static string PowerOffList([RememberType("System.Collections.Generic.List`1[[Test.Computer+Item]]")] object pcs) {
             var msg = PowerOffList_Original(pcs);
             return "InternalTypeMethod " + msg;
         }
 
-        [ShadowMethod]
+        [OriginalMethod]
         private static string PowerOffList_Original(object pcs) {
             return null;
         }
@@ -204,33 +204,33 @@ namespace Test
 
 
         #region 【不支持】泛型方法<引用类型>，每种使用到的类型都单独实现，如：string，object。引用类型的泛型方法无法正确Hook，原因不明
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public static string Any([RememberType(isGeneric: true)]string val) {
             return "Hook<string> " + Any_Original(val);
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public static string Any_Original(string val) {
             return null;
         }
         #endregion
 
         #region 泛型方法<值类型>，每种使用到的类型都单独实现，如：int、bool
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public static string Any([RememberType(isGeneric: true)]int val) {
             return "Hook<int> " + Any_Original(val);
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public static string Any_Original(int val) {
             return null;
         }
         #endregion
 
         #region 泛型方法<值类型>，每种使用到的类型都单独实现，如：int、bool
-        [RelocatedMethodAttribute("Test.Computer")]
+        [HookMethod("Test.Computer")]
         public static async Task<string> AnyAsync([RememberType(isGeneric: true)]int val) {
             return "Hook<int> " + await AnyAsync_Original(val);
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public static async Task<string> AnyAsync_Original(int val) {
             await Task.Delay(1);
             return null;
@@ -242,7 +242,7 @@ namespace Test
 
 
         #region 泛型类型<引用类型>的方法，只能用一个方法进行hook，如：string，object
-        [RelocatedMethodAttribute(typeof(ComputerOf<Object>))]
+        [HookMethod(typeof(ComputerOf<Object>))]
         public object ComputerIo(object name) {
             if (name is string) {
                 var human = ComputerIo_Original(name);
@@ -256,29 +256,29 @@ namespace Test
             }
             return null;
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public object ComputerIo_Original(object owner) {
             return null;
         }
         #endregion
 
         #region 泛型类型<值类型>的方法，每种使用到的类型都单独实现，如：int、bool
-        [RelocatedMethodAttribute("Test.ComputerOf`1[[System.Int32]]")]
+        [HookMethod("Test.ComputerOf`1[[System.Int32]]")]
         public int ComputerIo(int name) {
             return ComputerIo_Original(name) + 1;
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public int ComputerIo_Original(int owner) {
             return 0;
         }
         #endregion
 
         #region 泛型类型<值类型>的方法，每种使用到的类型都单独实现，如：int、bool
-        [RelocatedMethodAttribute("Test.ComputerOf`1[[System.Int32]]")]
+        [HookMethod("Test.ComputerOf`1[[System.Int32]]")]
         public async Task<int> ComputerIoAsync(int name) {
             return await ComputerIoAsync_Original(name) + 1;
         }
-        [ShadowMethod]
+        [OriginalMethod]
         public async Task<int> ComputerIoAsync_Original(int owner) {
             await Task.Delay(1);
             return 0;
@@ -292,13 +292,13 @@ namespace Test
 
 
         private class Framework : IMethodHook {
-            [RelocatedMethod("System.IO.File")]
+            [HookMethod("System.IO.File")]
             public static string ReadAllText(string file) {
                 return "Hook " + ori(file) + "：NetFrameworkDetour";
             }
 
-            //一个hook的ShadowMethod名字可以随便写
-            [ShadowMethod]
+            //一个hook的OriginalMethod名字可以随便写
+            [OriginalMethod]
             public static string ori(string file) {
                 return null;
             }

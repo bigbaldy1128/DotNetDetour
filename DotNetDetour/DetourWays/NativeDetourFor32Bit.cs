@@ -28,8 +28,8 @@ namespace DotNetDetour.DetourWays
         }
 
         public virtual void Patch(MethodBase rawMethod/*要hook的目标函数*/,
-            MethodBase customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/,
-            MethodBase placeholder/*占位函数*/)
+            MethodBase hookMethod/*用户定义的函数，可以调用原始占位函数来实现对原函数的调用*/,
+            MethodBase originalMethod/*原始占位函数*/)
         {
             //确保jit过了
             var typeHandles = rawMethod.DeclaringType.GetGenericArguments().Select(t => t.TypeHandle).ToArray();
@@ -37,18 +37,18 @@ namespace DotNetDetour.DetourWays
 
             rawMethodPtr = (byte*)rawMethod.MethodHandle.GetFunctionPointer().ToPointer();
 
-            var customImplMethodPtr = (byte*)customImplMethod.MethodHandle.GetFunctionPointer().ToPointer();
+            var hookMethodPtr = (byte*)hookMethod.MethodHandle.GetFunctionPointer().ToPointer();
             //生成跳转指令，使用相对地址，用于跳转到用户定义函数
             fixed (byte* newInstrPtr = newInstrs)
             {
-                *(uint*)(newInstrPtr + 1) = (uint)customImplMethodPtr - (uint)rawMethodPtr - 5;
+                *(uint*)(newInstrPtr + 1) = (uint)hookMethodPtr - (uint)rawMethodPtr - 5;
             }
 
 
             //将对占位函数的调用指向原函数，实现调用占位函数即调用原始函数的功能
-            if (placeholder != null)
+            if (originalMethod != null)
             {
-                MakePlacholderMethodCallPointsToRawMethod(placeholder);
+                MakePlacholderMethodCallPointsToRawMethod(originalMethod);
             }
 
 
@@ -70,10 +70,10 @@ namespace DotNetDetour.DetourWays
         }
 
         /// <summary>
-        /// 将对placeholder的调用指向原函数
+        /// 将对originalMethod的调用指向原函数
         /// </summary>
-        /// <param name="placeholder"></param>
-        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase placeholder)
+        /// <param name="originalMethod"></param>
+        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase originalMethod)
         {
             uint oldProtect;
             var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);
@@ -92,8 +92,8 @@ namespace DotNetDetour.DetourWays
             }
             Marshal.Copy(code, 0, ptr, total_length);
             NativeAPI.VirtualProtect(ptr, (uint)total_length, Protection.PAGE_EXECUTE_READWRITE, out oldProtect);
-            RuntimeHelpers.PrepareMethod(placeholder.MethodHandle);
-            *((uint*)placeholder.MethodHandle.Value.ToPointer() + 2) = (uint)ptr;
+            RuntimeHelpers.PrepareMethod(originalMethod.MethodHandle);
+            *((uint*)originalMethod.MethodHandle.Value.ToPointer() + 2) = (uint)ptr;
         }
     }
 }

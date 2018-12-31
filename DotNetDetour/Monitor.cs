@@ -12,22 +12,24 @@ namespace DotNetDetour
     class DestAndOri
     {
         /// <summary>
-        /// 代理方法
+        /// Hook代理方法
         /// </summary>
-        public MethodBase RelocatedMethod { get; set; }
+        public MethodBase HookMethod { get; set; }
 
         /// <summary>
-        /// 目标方法的影子方法
+        /// 目标方法的原始方法
         /// </summary>
-        public MethodBase ShadowMethod { get; set; }
+        public MethodBase OriginalMethod { get; set; }
 
         public IMethodHook Obj;
     }
 
-    [Obsolete("此类已变更为ClrMethodHook")]
-    public class Monitor : ClrMethodHook {}
+    [Obsolete("此类已变更为MethodHook")]
+    public class Monitor : MethodHook { }
+    [Obsolete("此类已变更为MethodHook")]
+    public class ClrMethodHook : MethodHook { }
 
-    public class ClrMethodHook
+    public class MethodHook
     {
         static public BindingFlags AllFlag = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
         static bool installed = false;
@@ -60,20 +62,20 @@ namespace DotNetDetour
 
             foreach (var monitor in monitors) {
                 var all = monitor.GetType().GetMethods(AllFlag);
-                var relocatedMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(RelocatedMethodAttribute).IsAssignableFrom(a.AttributeType)));
-                var shadowMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(ShadowMethodAttribute).IsAssignableFrom(a.AttributeType))).ToArray();
+                var hookMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(HookMethodAttribute).IsAssignableFrom(a.AttributeType)));
+                var originalMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(OriginalMethodAttribute).IsAssignableFrom(a.AttributeType))).ToArray();
 
-                var destCount = relocatedMethods.Count();
-                foreach (var relocated in relocatedMethods) {
+                var destCount = hookMethods.Count();
+                foreach (var hookMethod in hookMethods) {
                     DestAndOri destAndOri = new DestAndOri();
                     destAndOri.Obj = monitor;
-                    destAndOri.RelocatedMethod = relocated;
+                    destAndOri.HookMethod = hookMethod;
                     if (destCount == 1) {
-                        destAndOri.ShadowMethod = shadowMethods.FirstOrDefault();
+                        destAndOri.OriginalMethod = originalMethods.FirstOrDefault();
                     } else {
-                        var shadowName = relocated.GetCustomAttribute<RelocatedMethodAttribute>().GetShadowMethodName(relocated);
+                        var originalMethodName = hookMethod.GetCustomAttribute<HookMethodAttribute>().GetOriginalMethodName(hookMethod);
 
-                        destAndOri.ShadowMethod = FindMethod(shadowMethods, shadowName, relocated, assemblies);
+                        destAndOri.OriginalMethod = FindMethod(originalMethods, originalMethodName, hookMethod, assemblies);
                     }
 
                     destAndOris.Add(destAndOri);
@@ -88,13 +90,13 @@ namespace DotNetDetour
         {
             foreach (var detour in destAndOris)
             {
-                var relocatedMethod = detour.RelocatedMethod;
-                var relocatedAttribute = relocatedMethod.GetCustomAttribute<RelocatedMethodAttribute>();
+                var hookMethod = detour.HookMethod;
+                var hookMethodAttribute = hookMethod.GetCustomAttribute<HookMethodAttribute>();
 
                 //获取当前程序集中的基础类型
-                var typeName = relocatedAttribute.TargetTypeFullName;
-                if (relocatedAttribute.TargetType != null) {
-                    typeName = relocatedAttribute.TargetType.FullName;
+                var typeName = hookMethodAttribute.TargetTypeFullName;
+                if (hookMethodAttribute.TargetType != null) {
+                    typeName = hookMethodAttribute.TargetType.FullName;
                 }
                 var type = TypeResolver(typeName, assemblies);
                 if (type != null && !assemblies.Contains(type.Assembly)) {
@@ -102,7 +104,7 @@ namespace DotNetDetour
                 }
 
                 //获取方法
-                var methodName = relocatedAttribute.GetTargetMethodName(relocatedMethod);
+                var methodName = hookMethodAttribute.GetTargetMethodName(hookMethod);
                 MethodBase rawMethod = null;
                 if (type != null) {
                     MethodBase[] methods;
@@ -114,11 +116,11 @@ namespace DotNetDetour
                         methods = type.GetMethods(AllFlag);
                     }
 
-                    rawMethod = FindMethod(methods, methodName, relocatedMethod, assemblies);
+                    rawMethod = FindMethod(methods, methodName, hookMethod, assemblies);
                 }
                 if (rawMethod != null && rawMethod.IsGenericMethod) {
                     //泛型方法转成实际方法
-                    rawMethod = ((MethodInfo)rawMethod).MakeGenericMethod(relocatedMethod.GetParameters().Select(o => {
+                    rawMethod = ((MethodInfo)rawMethod).MakeGenericMethod(hookMethod.GetParameters().Select(o => {
                         var rt = o.ParameterType;
                         var attr = o.GetCustomAttribute<RememberTypeAttribute>();
                         if (attr != null && attr.TypeFullNameOrNull != null) {
@@ -131,7 +133,7 @@ namespace DotNetDetour
                 if (rawMethod == null)
                 {
                     if (isInstall) {
-                        Debug.WriteLine("没有找到与试图Hook的方法\"{0}, {1}\"匹配的目标方法.", new object[] { relocatedMethod.ReflectedType.FullName, relocatedMethod });
+                        Debug.WriteLine("没有找到与试图Hook的方法\"{0}, {1}\"匹配的目标方法.", new object[] { hookMethod.ReflectedType.FullName, hookMethod });
                     }
                     continue;
                 }
@@ -139,13 +141,13 @@ namespace DotNetDetour
                     ((IMethodHookWithSet)detour.Obj).HookMethod(rawMethod);
                 }
 
-                var shadowMethod = detour.ShadowMethod;
+                var originalMethod = detour.OriginalMethod;
                 var engine = DetourFactory.CreateDetourEngine();
-                engine.Patch(rawMethod, relocatedMethod, shadowMethod);
+                engine.Patch(rawMethod, hookMethod, originalMethod);
 
-                Debug.WriteLine("已将目标方法 \"{0}, {1}\" 的调用指向 \"{2}, {3}\" Shadow: \"{4}\".", rawMethod.ReflectedType.FullName, rawMethod
-                    , relocatedMethod.ReflectedType.FullName, relocatedMethod
-                    , shadowMethod == null ? " (无)" : shadowMethod.ToString());
+                Debug.WriteLine("已将目标方法 \"{0}, {1}\" 的调用指向 \"{2}, {3}\" Ori: \"{4}\".", rawMethod.ReflectedType.FullName, rawMethod
+                    , hookMethod.ReflectedType.FullName, hookMethod
+                    , originalMethod == null ? " (无)" : originalMethod.ToString());
             }
         }
 

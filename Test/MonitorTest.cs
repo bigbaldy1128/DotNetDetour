@@ -14,20 +14,20 @@ namespace Test
     {
         [TestMethod]
         public void A_DotNetSystemMethod() {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("Hook My_name_is_：NetFrameworkDetour", File.ReadAllText("test"));
         }
 
         [TestMethod]
         public void StaticMethod()
         {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("Not Intel Core I7", Computer.GetCpu());
         }
 
         [TestMethod]
         public void ConstructorMethod(){
-            ClrMethodHook.Install();
+            MethodHook.Install();
 
             CallContext.LogicalSetData("OpenComputerConstructorHook", "1");
             var o = new Computer();
@@ -38,19 +38,19 @@ namespace Test
 
         [TestMethod]
         public void InternalTypeMethod() {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("InternalTypeMethod X1:off", new Computer().PowerOff());
         }
 
         [TestMethod]
         public void InstanceMethod()
         {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("Hook 512M", new Computer().GetRAMSize());
         }
         [TestMethod]
         public void InstanceMethod2() {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("Hook 土豆(worked)", new Computer().Work("土豆"));
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
@@ -70,13 +70,13 @@ namespace Test
         [TestMethod]
         public void PropertyMethod()
         {
-            ClrMethodHook.Install();
+            MethodHook.Install();
             Assert.AreEqual("Not Windows 10", new Computer().Os);
         }
 
         [TestMethod]
         public void GenericMethodMethod() {
-            ClrMethodHook.Install();
+            MethodHook.Install();
 
             Assert.AreEqual("Hook<int> 123", Computer.Any<int>(123));
             //引用类型的没法正确hook，不知道啥原因
@@ -95,7 +95,7 @@ namespace Test
 
         [TestMethod]
         public void GenericTypeMethod() {
-            ClrMethodHook.Install();
+            MethodHook.Install();
 
             Assert.AreEqual("Hook<string> Jack", new ComputerOf<string>().ComputerIo("Jack"));
 

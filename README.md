@@ -28,14 +28,14 @@ namespace Test.Solid {
 namespace Test{
     //我们自行实现一个类来修改Run方法的行为，此类用IMethodHook接口修饰
     public class MyClass:IMethodHook{
-        //我们实现一个新Run方法，并标记为RelocatedMethodAttribute，覆盖SolidClass中的Run方法
-        [RelocatedMethodAttribute("Test.Solid.SolidClass")]
+        //我们实现一个新Run方法，并标记为HookMethod，覆盖SolidClass中的Run方法
+        [HookMethod("Test.Solid.SolidClass")]
         public string Run(string msg){
             return "Hook " + Run_Original(msg);
         }
         
-        //实现一个占位影子方法，此方法代表被Hook覆盖的原始方法
-        [ShadowMethod]
+        //实现一个占位方法，此方法代表被Hook覆盖的原始方法
+        [OriginalMethod]
         public string Run_Original(string msg){
             return null; //这里写什么无所谓，能编译过即可
         }
@@ -45,7 +45,7 @@ namespace Test{
 
 3. 在程序中执行安装操作（只需运行一次即可），最佳运行时机：必须在被Hook方法被调用前执行，最好程序启动时运行一次即可。
 ``` C#
-ClrMethodHook.Install();
+MethodHook.Install();
 ```
 
 4. 当执行到被Hook的方法时，该调用将被转到我们的Hook方法执行：
@@ -63,7 +63,7 @@ var msg=new SolidClass().Run("Hello World!");
 
 ## 普通方法Hook
 
-静态和非静态的普通方法Hook操作都是一模一样的，两步到位：新建一个类实现`IMethodHook`接口，编写普通Hook方法，用`RelocatedMethodAttribute`注解标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
+静态和非静态的普通方法Hook操作都是一模一样的，两步到位：新建一个类实现`IMethodHook`接口，编写普通Hook方法，用`HookMethod`特性标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
 
 
 ### 第一步：新建一个类实现`IMethodHook`接口
@@ -72,18 +72,18 @@ var msg=new SolidClass().Run("Hello World!");
 或者使用`IMethodHookWithSet`接口(算Plus版吧)，此接口带一个`HookMethod(MethodBase method)`方法，这个类每成功进行一个Hook的初始化，就会传入被Hook的原始方法（可判断方法名称来确定是初始化的哪个方法），这个方法可用于获取方法所在的类（如：私有类型），可用于简化后续的反射操作；注意：此方法应当当做静态方法来进行编码。
 
 
-### 第二步：编写Hook方法，用`RelocatedMethodAttribute`注解标记
-`RelocatedMethodAttribute`(`type`,`targetMethodName`,`shadowMethodName`) 支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List&#96;1[[System.String]]`。
+### 第二步：编写Hook方法，用`HookMethod`特性标记
+`HookMethod`(`type`,`targetMethodName`,`originalMethodName`) ，`type`参数支持：Type类型对象、类型完全限定名。如果能直接获取到类型对象，就使用Type类型对象；否则必须使用此类型的完全限定名（如：私有类型），如：`System.Int32`、`System.Collections.Generic.List&#96;1[[System.String]]`。
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
+[HookMethod("Namespace.xxx.MyClass", "TargetMethodName", "OriginalMethodName")]
 public string MyMethod(string param){...}
 
-[RelocatedMethodAttribute(typeof(MyClass))]
+[HookMethod(typeof(MyClass))]
 public string MyMethod(string param){...}
 ```
 如果我们的方法名称和被Hook的目标方法名称一致，无需提供`targetMethodName`参数。
 
-如果我们提供目标原始方法的占位影子方法`ShadowMethod`，并且名称为`目标原始方法名称` `+` `_Original`，或者当前类内只有一个Hook方法，无需提供`shadowMethodName`参数。
+如果我们提供目标原始方法的占位方法`OriginalMethod`，并且名称为`目标原始方法名称` `+` `_Original`，或者当前类内只有一个Hook方法，无需提供`originalMethodName`参数。
 
 ### 注意：方法参数
 参数签名要和被Hook的原始方法一致，如果不一致将导致无法找到原始方法（原因：存在重载方法无法确认是哪个的问题）。
@@ -97,12 +97,12 @@ public string SolidMethod(MyClass data, int code){...}
 public string MyMethod([RememberType("Namespace.xxx.MyClass")]object data, int code){...}
 ```
 
-### 可选：提供`ShadowMethodAttribute`注解的原始方法
-如果我们还想调用被Hook的原始方法，我们可以提供一个占位方法，此方法用`ShadowMethodAttribute`进行注解即可。此方法只起到代表原始方法的作用，不需要可以不提供，要求：参数签名必须和我们写的Hook方法一致（原因：存在重载方法无法确认是哪个的问题）。
+### 可选：提供`OriginalMethod`特性标记的原始方法
+如果我们还想调用被Hook的原始方法，我们可以提供一个占位方法，此方法用`OriginalMethod`进行标记即可。此方法只起到代表原始方法的作用，不需要可以不提供，要求：参数签名必须和我们写的Hook方法一致（原因：存在重载方法无法确认是哪个的问题）。
 
-默认名称为`目标原始方法名称` `+` `_Original`，不使用这个名称也可以，但如果使用其他名称并且当前类中有多个Hook方法，必须在Hook方法`RelocatedMethodAttribute`注解中进行设置`shadowMethodName`进行关联。
+此方法默认名称格式为`目标原始方法名称` `+` `_Original`，不使用这个名称也可以，但如果使用其他名称并且当前类中有多个Hook方法，必须在Hook方法`HookMethod`特性中进行设置`originalMethodName`进行关联。
 ``` C#
-[ShadowMethod]
+[OriginalMethod]
 public string SolidMethod_Original(object data, int code){
 ```
 
@@ -112,7 +112,7 @@ public string SolidMethod_Original(object data, int code){
 我们可以通过当前线程相关的上下文来传递数据，比如：`HttpContext`、`CallContext`、`AsyncLocal`、`ThreadLoacl`。推荐使用`CallContext.LogicalSetData`来传递数据，如果可以用`HttpContext`就更好了（底层也是用`CallContext.HostContext`来实现的）。`ThreadLoacl`只能当前线程用，遇到异步、多线程就不行了。`AsyncLocal`当然是最好的，但稍微低些版本的.Net Framework还没有这个。
 
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass", "TargetMethodName", "ShadowMethodName")]
+[HookMethod("Namespace.xxx.MyClass", "TargetMethodName", "OriginalMethodName")]
 public string MyMethod(string param){
     if (CallContext.LogicalGetData("key") == (object)"value") {
         //执行特定Hook代码
@@ -136,7 +136,7 @@ CallContext.LogicalSetData("key", null);
 
 小提醒：不要在存在SynchronizationContext(如：HttpContext、UI线程)的线程环境中直接在同步方法中调用异步方法，[真发生异步行为时100%死锁](https://blog.stephencleary.com/2012/07/dont-block-on-async-code.html)，可以强制关闭SynchronizationContext来规避此种问题，但会引发一系列问题。**如果使用过程中发生死锁，跟我们进行的Hook操作没有关系**。
 ``` C#
-[RelocatedMethodAttribute(typeof(MyClass))]
+[HookMethod(typeof(MyClass))]
 public async Task<int> MyMethodAsync() {...}
 
 //异步环境调用
@@ -155,16 +155,23 @@ try {
 
 ## 属性Hook
 属性其实是`get_xxx()`名称的普通方法，比如`MyProperty`属性Hook `get_MyProperty()`这个普通方法即可。
+``` C#
+[HookMethod("Namespace.xxx.MyClass")]
+public string get_MyProperty(){...}
 
-或者在get块上方进行注解，规则和普通方法一致：
+[OriginalMethod]
+public string get_MyProperty_Original(){...}
+```
+
+或者在get块上方进行标记，规则和普通方法一致：
 ``` C#
 public string MyProperty{
-    [RelocatedMethodAttribute("Namespace.xxx.MyClass")]
+    [HookMethod("Namespace.xxx.MyClass")]
     get{ ... }
 }
 
 public string MyProperty_Original{
-    [ShadowMethod]
+    [OriginalMethod]
     get{ ... }
 }
 ```
@@ -183,34 +190,41 @@ int C{get{return 123;}}
 
 
 ## 构造方法Hook
-我们编写个返回值为void、方法名称为类名称的普通方法即可实现。如果方法名称无法使用类名称时，需在`RelocatedMethodAttribute`中设置`targetMethodName`为`.ctor`。其他规则和普通方法一致。
+我们编写个返回值为void、方法名称为类名称的普通方法即可实现。如果方法名称无法使用类名称时，需在`HookMethod`中设置`targetMethodName`为`.ctor`。其他规则和普通方法一致。
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass")]
+[HookMethod("Namespace.xxx.MyClass")]
 public void MyClass(string param) {
+    ...
+    MyClass_Original(param);//可选调用自身实例化方法
+    ...
+}
+
+[OriginalMethod]
+public void MyClass_Original(string param) {}
 ```
 
 
 ## 泛型类的方法Hook
 
-形如`class MyClass<T>{ T MyMethod(T param, object param2){...}  }`这种类型内的方法Hook。泛型类中方法的Hook和普通方法Hook没有多大区别，只是在提供`RelocatedMethodAttribute`注解`type`参数时需要对类型具体化，比如调用的地方使用的是int类型，那么我们就Hook int类型的此类：`typeof(MyClass<int>)`、`Namespace.xxx.MyClass&#96;1[[System.Int32]]`，其他和普通方法规则相同。
+形如`class MyClass<T>{ T MyMethod(T param, object param2){...}  }`这种泛型，对里面的方法进行Hook。泛型类中方法的Hook和普通方法Hook没有多大区别，只是在提供`HookMethod`特性的`type`参数时需要对类型具体化，比如调用的地方使用的是int类型，那么我们就Hook int类型的此类：`typeof(MyClass<int>)`、`Namespace.xxx.MyClass&#96;1[[System.Int32]]`，其他和普通方法规则相同。
 
 由于存在`引用类型`和`值类型`两种类型，并且表现不一致，我们在具体化时要分开对待。
 
 ### 值类型泛型参数
 每种使用到的值类型泛型参数的具体类型都需要单独实现Hook，`int`、`bool`等为值类型都要单独实现，如`int`类型写法：
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass`1[[System.Int32]]")]
+[HookMethod("Namespace.xxx.MyClass`1[[System.Int32]]")]
 public int MyMethod(int param, object param2) {
 ```
 
 
 ### 引用类型泛型参数
-每种使用到引用类型参数的具体类型都共用一个Hook，**注意是：同一个泛型类中的同一个方法只能用一个相同方法进行Hook**，`string`、普通`object`等都是引用类型都共用一个Hook，如`string`类型写法：
+每种使用到引用类型参数的具体类型都共用一个Hook，**注意是：同一个泛型类中的同一个方法只能用一个相同方法进行Hook**，`string`、`普通object`等都是引用类型都共用一个Hook，如`string`类型写法：
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass`1[[System.Object]]")]
+[HookMethod("Namespace.xxx.MyClass`1[[System.Object]]")]
 public object MyMethod(object param, object param2) {
     if(param is string){
-        ... //string 实现代码
+        ... //string 类型实现代码
     } else if(param is xxxx){
         ... //其他引用类型实现代码
     }
@@ -219,14 +233,14 @@ public object MyMethod(object param, object param2) {
 
 ## 泛型方法Hook
 
-形如`T MyMethod<T>(T param, object param2)`这种泛型方法，我们对这种方法进行Hook时需要把类型具体化，并用`RememberType(isGeneric: true)`注解涉及到的泛型参数，比如调用的地方是int类型，那么我们就Hook int类型的此方法`int MyMethod([RememberType(isGeneric: true)]int param, object param2)`，其实最终还是一个普通方法，按普通方法规则来写代码。
+形如`T MyMethod<T>(T param, object param2)`这种泛型方法，我们对这种方法进行Hook时需要把类型具体化，并用`RememberType(isGeneric: true)`特性标记涉及到的泛型参数，比如调用的地方是int类型，那么我们就Hook int类型的此方法`int MyMethod([RememberType(isGeneric: true)]int param, object param2)`，其实最终还是一个普通方法，按普通方法规则来写代码。
 
 由于存在`引用类型`和`值类型`两种类型，并且表现不一致，我们在具体化时要分开对待。
 
 ### 值类型泛型参数
 每种使用到值类型泛型参数的都单独实现Hook，`int`、`bool`等为值类型都要单独实现，如int类型写法：
 ``` C#
-[RelocatedMethodAttribute("Namespace.xxx.MyClass")]
+[HookMethod("Namespace.xxx.MyClass")]
 public int MyMethod([RememberType(isGeneric: true)]int param) {
 ```
 
@@ -254,14 +268,8 @@ vs的测试功能会启动一个执行引擎，其默认选项是复用执行引
 
 已对3个主要的方法都进行了变更：
 
-1. `Monitor` -> `ClrMethodHook`
-2. `MonitorAttribute` -> `RelocatedMethodAttribute`
-    1. `MonitorAttribute(string NamespaceName, string ClassName)` -> `RelocatedMethodAttribute(string targetTypeFullName, string targetMethodName = null, string shadowMethodName = null)`
-    2. `MonitorAttribute(Type type)` -> `RelocatedMethodAttribute(Type targetType, string targetMethodName = null, string shadowMethodName = null)`
-3. `OriginalAttribute` -> `ShadowMethodAttribute`
+1. `Monitor`、`ClrMethodHook` -> `MethodHook`
+2. `MonitorAttribute`、`RelocatedMethodAttribute` -> `HookMethodAttribute`
+3. `OriginalAttribute`、`ShadowMethodAttribute(不兼容)` -> `OriginalMethodAttribute`
 
-这3个变更都是兼容的，但不推荐继续使用老方法，并且将来可能会从类库里面移除。
-
-另外已废弃`ShadowMethodAttribute`中两个带参数的构造方法，已不兼容：
-1. `ShadowMethodAttribute(string targetTypeName, string methodName)`
-2. `ShadowMethodAttribute(Type classType, string methodName)`
+除`ShadowMethodAttribute`外（升级需要改动被标记的方法名称，因而无法兼容），这3个变更都是兼容的，但不推荐继续使用老方法，并且将来可能会从类库里面移除。
