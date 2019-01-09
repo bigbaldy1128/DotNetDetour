@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Threading;
 using System.Linq.Expressions;
 using System.IO;
+using System.Diagnostics;
 
 namespace DotNetDetour.DetourWays
 {
@@ -26,9 +27,9 @@ namespace DotNetDetour.DetourWays
         {
         }
 
-        public virtual bool Patch(MethodBase rawMethod/*要hook的目标函数*/, 
-            MethodInfo customImplMethod/*用户定义的函数，可以调用占位函数来实现对原函数的调用*/, 
-            MethodInfo placeholder/*占位函数*/)
+        public virtual void Patch(MethodBase rawMethod/*要hook的目标函数*/,
+            MethodBase hookMethod/*用户定义的函数，可以调用原始占位函数来实现对原函数的调用*/,
+            MethodBase originalMethod/*原始占位函数*/)
         {
             //确保jit过了
             var typeHandles = rawMethod.DeclaringType.GetGenericArguments().Select(t => t.TypeHandle).ToArray();
@@ -36,29 +37,25 @@ namespace DotNetDetour.DetourWays
 
             rawMethodPtr = (byte*)rawMethod.MethodHandle.GetFunctionPointer().ToPointer();
 
-            var customImplMethodPtr = (byte*)customImplMethod.MethodHandle.GetFunctionPointer().ToPointer();
+            var hookMethodPtr = (byte*)hookMethod.MethodHandle.GetFunctionPointer().ToPointer();
             //生成跳转指令，使用相对地址，用于跳转到用户定义函数
             fixed (byte* newInstrPtr = newInstrs)
             {
-                *(uint*)(newInstrPtr + 1) = (uint)customImplMethodPtr - (uint)rawMethodPtr - 5;
+                *(uint*)(newInstrPtr + 1) = (uint)hookMethodPtr - (uint)rawMethodPtr - 5;
             }
 
-            //因测试项目的特殊性，确保测试项目代码不会重入
-            if (IsDetourInstalled())
-            {
-                return false;
-            }
 
             //将对占位函数的调用指向原函数，实现调用占位函数即调用原始函数的功能
-            if (placeholder != null)
+            if (originalMethod != null)
             {
-                MakePlacholderMethodCallPointsToRawMethod(placeholder);
+                MakePlacholderMethodCallPointsToRawMethod(originalMethod);
             }
 
 
             //并且将对原函数的调用指向跳转指令，以此实现将对原始目标函数的调用跳转到用户定义函数执行的目的
             Patch();
-            return true;
+
+            Debug.WriteLine("Patch: Point=" + rawMethod.MethodHandle.GetFunctionPointer().ToInt64() + " Method=" + rawMethod + " Type=" + rawMethod.ReflectedType.FullName);
         }
 
         protected virtual void Patch()
@@ -73,10 +70,10 @@ namespace DotNetDetour.DetourWays
         }
 
         /// <summary>
-        /// 将对placeholder的调用指向原函数
+        /// 将对originalMethod的调用指向原函数
         /// </summary>
-        /// <param name="placeholder"></param>
-        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodInfo placeholder)
+        /// <param name="originalMethod"></param>
+        protected virtual void MakePlacholderMethodCallPointsToRawMethod(MethodBase originalMethod)
         {
             uint oldProtect;
             var needSize = LDasm.SizeofMin5Byte(rawMethodPtr);
@@ -95,18 +92,8 @@ namespace DotNetDetour.DetourWays
             }
             Marshal.Copy(code, 0, ptr, total_length);
             NativeAPI.VirtualProtect(ptr, (uint)total_length, Protection.PAGE_EXECUTE_READWRITE, out oldProtect);
-            RuntimeHelpers.PrepareMethod(placeholder.MethodHandle);
-            *((uint*)placeholder.MethodHandle.Value.ToPointer() + 2) = (uint)ptr;
-        }
-
-        public virtual bool IsDetourInstalled()
-        {
-            byte[] v = new byte[newInstrs.Length];
-            for (int i = 0; i < v.Length; i++)
-            {
-                v[i] = *(rawMethodPtr + i);
-            }
-            return v.SequenceEqual(newInstrs);
+            RuntimeHelpers.PrepareMethod(originalMethod.MethodHandle);
+            *((uint*)originalMethod.MethodHandle.Value.ToPointer() + 2) = (uint)ptr;
         }
     }
 }

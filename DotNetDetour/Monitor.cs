@@ -9,29 +9,29 @@ using System.Threading.Tasks;
 
 namespace DotNetDetour
 {
-    [DebuggerDisplay("{TargetTypeFullName}.{MethodName}")]
     class DestAndOri
     {
         /// <summary>
-        /// 代理方法
+        /// Hook代理方法
         /// </summary>
-        public MethodInfo ProxyMethod;
-        public string MethodName;
-        public Type TargetType;
-        /// <summary>
-        /// 目标方法的影子方法，用于确认签名
-        /// </summary>
-        public MethodInfo ShadowMethod;
+        public MethodBase HookMethod { get; set; }
 
-        public string TargetTypeFullName { get; internal set; }
-        public override string ToString()
-        {
-            return $"{TargetTypeFullName}.{MethodName}".ToString();
-        }
+        /// <summary>
+        /// 目标方法的原始方法
+        /// </summary>
+        public MethodBase OriginalMethod { get; set; }
+
+        public IMethodHook Obj;
     }
 
-    public class ClrMethodHook
+    [Obsolete("此类已变更为MethodHook")]
+    public class Monitor : MethodHook { }
+    [Obsolete("此类已变更为MethodHook")]
+    public class ClrMethodHook : MethodHook { }
+
+    public class MethodHook
     {
+        static public BindingFlags AllFlag = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
         static bool installed = false;
         static List<DestAndOri> destAndOris = new List<DestAndOri>();
         /// <summary>
@@ -59,168 +59,173 @@ namespace DotNetDetour
                 monitors = assemblies
                             .SelectMany(d => d.GetImplementedObjectsByInterface<IMethodHook>());
             }
-            List<MethodInfo> proxyMethods = new List<MethodInfo>();
-            List<MethodInfo> clrMethods = new List<MethodInfo>();
-            foreach (var monitor in monitors)
-            {
-                var type = monitor.GetType();
 
+            foreach (var monitor in monitors) {
+                var all = monitor.GetType().GetMethods(AllFlag);
+                var hookMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(HookMethodAttribute).IsAssignableFrom(a.AttributeType)));
+                var originalMethods = all.Where(t => t.CustomAttributes.Any(a => typeof(OriginalMethodAttribute).IsAssignableFrom(a.AttributeType))).ToArray();
 
+                var destCount = hookMethods.Count();
+                foreach (var hookMethod in hookMethods) {
+                    DestAndOri destAndOri = new DestAndOri();
+                    destAndOri.Obj = monitor;
+                    destAndOri.HookMethod = hookMethod;
+                    if (destCount == 1) {
+                        destAndOri.OriginalMethod = originalMethods.FirstOrDefault();
+                    } else {
+                        var originalMethodName = hookMethod.GetCustomAttribute<HookMethodAttribute>().GetOriginalMethodName(hookMethod);
 
-                proxyMethods.AddRange(type.GetMethods().Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute))));
-                proxyMethods.AddRange(type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute))));
-                proxyMethods.AddRange(type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic).Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(RelocatedMethodAttribute))));
+                        destAndOri.OriginalMethod = FindMethod(originalMethods, originalMethodName, hookMethod, assemblies);
+                    }
 
-                clrMethods.AddRange(type.GetMethods().Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))));
-                clrMethods.AddRange(type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))));
-                clrMethods.AddRange(type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic).Where(t => t.CustomAttributes.Any(a => a.AttributeType == typeof(ShadowMethodAttribute))));
+                    destAndOris.Add(destAndOri);
+                }
             }
-            foreach (var item in proxyMethods.Distinct())
-            {
-                DestAndOri detour = new DestAndOri();
-                var proxyMethodAttr = item.GetCustomAttribute<RelocatedMethodAttribute>();
-                var clrMethod = clrMethods.FirstOrDefault(x => ParametersSequenceEqual(x, item) && x.GetCustomAttribute<ShadowMethodAttribute>().TargetMethodName == proxyMethodAttr.TargetMethodName);
-                detour.ProxyMethod = item;
-                detour.ShadowMethod = clrMethod;
-                detour.MethodName = proxyMethodAttr.TargetMethodName;
-                detour.TargetType = proxyMethodAttr.TargetType;
-                detour.TargetTypeFullName = proxyMethodAttr.TargetTypeName;
-                destAndOris.Add(detour);
-            }
-            InstallInternal(assemblies);
+
+            InstallInternal(true, assemblies);
             AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
         }
 
-        private static void InstallInternal(Assembly[] assemblies)
+        private static void InstallInternal(bool isInstall, Assembly[] assemblies)
         {
             foreach (var detour in destAndOris)
             {
-                MethodBase rawMethod = null;
-                var customImplMethod = detour.ProxyMethod;
-                var methodName = detour.MethodName;
-                var paramTypes = customImplMethod.GetParameters().Select(t => t.ParameterType).ToArray();
-                foreach (var asm in assemblies)
-                {
-                    Type type = null;
-                    if (detour.TargetType.IsGenericType)
-                    {
-                        type = asm.GetTypes().FirstOrDefault(t => t.BaseType == detour.TargetType.DeclaringType && detour.TargetType.GenericTypeArguments.SequenceEqual(t.GenericTypeArguments));
-                        if (type == null)
-                        {
-                            type = asm.GetTypes().FirstOrDefault(t => t.Name == detour.TargetType.Name && t.Namespace == detour.TargetType.Namespace && t.Module.FullyQualifiedName == detour.TargetType.Module.FullyQualifiedName);
-                            if (type == null)
-                            {
-                                var types = asm.GetTypes().Where(t => t.Name.StartsWith("Computer"));
-                                if (types.Any())
-                                {
-                                    var m = type.GenericTypeArguments.SequenceEqual(detour.TargetType.GenericTypeArguments);
-                                }
-                            }
-                            else
-                            {
-                                type = type.MakeGenericType(detour.TargetType.GenericTypeArguments);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        type = asm.GetTypes().FirstOrDefault(t => t.FullName == detour.TargetTypeFullName);
-                    }
-                    if (type != null)
-                    {
-                        if (methodName == ".ctor")
-                        {
-                            rawMethod = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                                .FirstOrDefault(item => item.Name == methodName
-                                && ParametersSequenceEqual(item.GetParameters().ToList(), (detour.ShadowMethod ?? customImplMethod).GetParameters().ToList(), assemblies));
-                        }
-                        else
-                        {
-                            rawMethod = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance)
-                            //src = type.GetMethods((detour.ShadowMethod.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic) | (detour.ShadowMethod.IsStatic ? BindingFlags.Static : BindingFlags.Instance))
-                                .FirstOrDefault(item => item.Name == methodName
-                                && ParametersSequenceEqual(item.GetParameters().ToList(), (detour.ShadowMethod ?? customImplMethod).GetParameters().ToList(), assemblies));
+                var hookMethod = detour.HookMethod;
+                var hookMethodAttribute = hookMethod.GetCustomAttribute<HookMethodAttribute>();
 
-                        }
-                        break;
-                    }
+                //获取当前程序集中的基础类型
+                var typeName = hookMethodAttribute.TargetTypeFullName;
+                if (hookMethodAttribute.TargetType != null) {
+                    typeName = hookMethodAttribute.TargetType.FullName;
                 }
+                var type = TypeResolver(typeName, assemblies);
+                if (type != null && !assemblies.Contains(type.Assembly)) {
+                    type = null;
+                }
+
+                //获取方法
+                var methodName = hookMethodAttribute.GetTargetMethodName(hookMethod);
+                MethodBase rawMethod = null;
+                if (type != null) {
+                    MethodBase[] methods;
+
+                    if (methodName == type.Name || methodName == ".ctor") {//构造方法
+                        methods = type.GetConstructors(AllFlag);
+                        methodName = ".ctor";
+                    } else {
+                        methods = type.GetMethods(AllFlag);
+                    }
+
+                    rawMethod = FindMethod(methods, methodName, hookMethod, assemblies);
+                }
+                if (rawMethod != null && rawMethod.IsGenericMethod) {
+                    //泛型方法转成实际方法
+                    rawMethod = ((MethodInfo)rawMethod).MakeGenericMethod(hookMethod.GetParameters().Select(o => {
+                        var rt = o.ParameterType;
+                        var attr = o.GetCustomAttribute<RememberTypeAttribute>();
+                        if (attr != null && attr.TypeFullNameOrNull != null) {
+                            rt = TypeResolver(attr.TypeFullNameOrNull, assemblies);
+                        }
+                        return rt;
+                    }).ToArray());
+                }
+
                 if (rawMethod == null)
                 {
-                    Debug.WriteLine("没有找到与试图Hook的方法\"{0}\"匹配的目标方法.", new object[] { detour.TargetTypeFullName + "." + detour.MethodName });
+                    if (isInstall) {
+                        Debug.WriteLine("没有找到与试图Hook的方法\"{0}, {1}\"匹配的目标方法.", new object[] { hookMethod.ReflectedType.FullName, hookMethod });
+                    }
+                    continue;
+                }
+                if (detour.Obj is IMethodHookWithSet) {
+                    ((IMethodHookWithSet)detour.Obj).HookMethod(rawMethod);
+                }
+
+                var originalMethod = detour.OriginalMethod;
+                var engine = DetourFactory.CreateDetourEngine();
+                engine.Patch(rawMethod, hookMethod, originalMethod);
+
+                Debug.WriteLine("已将目标方法 \"{0}, {1}\" 的调用指向 \"{2}, {3}\" Ori: \"{4}\".", rawMethod.ReflectedType.FullName, rawMethod
+                    , hookMethod.ReflectedType.FullName, hookMethod
+                    , originalMethod == null ? " (无)" : originalMethod.ToString());
+            }
+        }
+
+        private static Type TypeResolver(string typeName, Assembly[] assemblies) {
+            return Type.GetType(typeName, null, (a, b, c) => {
+                Type rt;
+                if (a != null) {
+                    rt = a.GetType(b);
+                    if (rt != null) {
+                        return rt;
+                    }
+                }
+                rt = Type.GetType(b);
+                if (rt != null) {
+                    return rt;
+                }
+                foreach (var asm in assemblies) {
+                    rt = asm.GetType(b);
+                    if (rt != null) {
+                        return rt;
+                    }
+                }
+                return null;
+            });
+        }
+        //查找匹配函数
+        private static MethodBase FindMethod(MethodBase[] methods, string name, MethodBase like, Assembly[] assemblies) {
+            var likeParams = like.GetParameters();
+            foreach (var item in methods) {
+                if (item.Name != name) {
                     continue;
                 }
 
-                var shadowMethod = detour.ShadowMethod;
+                var paramArr = item.GetParameters();
+                var len = paramArr.Count();
+                if (len != likeParams.Count()) {
+                    continue;
+                }
 
-                //IsStatic必须一致，否则报内存访问错误
-                if (rawMethod.IsStatic != shadowMethod.IsStatic)
-                {
-                    var clrDesc = rawMethod.IsStatic ? "static" : "  non static";
-                    var shadowDesc = shadowMethod.IsStatic ? "static" : "  non static";
-                    throw new Exception(string.Format("the method \"{0}\" you implemented is {1}, but the target method \"{2}\" is {3}",
-                        shadowMethod.DeclaringType + "." + shadowMethod.Name,
-                        shadowDesc,
-                        rawMethod.DeclaringType + "." + rawMethod.Name,
-                        clrDesc
-                        ));
-                }
-                var engine = DetourFactory.CreateDetourEngine();
-                if (engine.Patch(rawMethod, customImplMethod, shadowMethod))
-                {
-                    Debug.WriteLine("已将目标方法 \"{0}\" 的调用指向 \"{1}\".", new object[] { rawMethod.DeclaringType + "." + rawMethod.Name, customImplMethod.DeclaringType + "." + customImplMethod.Name });
-                }
-                else
-                {
-                    Debug.WriteLine("可能在历史调用中已将目标方法的调用\"{0}\"指向\"{1}\".", new object[] { rawMethod.DeclaringType + "." + rawMethod.Name, customImplMethod.DeclaringType + "." + customImplMethod.Name });
-                }
-            }
-        }
-        public static bool ParametersSequenceEqual(MethodBase p1, MethodBase p2)
-        {
-            return p1.GetParameters().Select(x => x.ParameterType).SequenceEqual(p2.GetParameters().Select(x => x.ParameterType));
-        }
-        public static bool ParametersSequenceEqual(List<ParameterInfo> p1, List<ParameterInfo> p2, Assembly[] assemblies)
-        {
-            if (p1.SequenceEqual(p2))
-            {
-                return true;
-            }
-            else if (p1.Count() != p2.Count())
-            {
-                return false;
-            }
-            else
-            {
-                foreach (var type2 in p2)
-                {
-                    var index = p2.IndexOf(type2);
-                    var d = type2.GetCustomAttributesData();
-                    var opt = type2.GetCustomAttribute<NonPublicParameterTypeAttribute>();
-                    if (opt != null)
-                    {
-                        var itemType = assemblies.SelectMany(x => x.GetTypes()).FirstOrDefault(x => x.FullName == opt.FullName);
-                        if (itemType != null && itemType.Equals(p1[index].ParameterType))
-                        {
+                for (var i = 0; i < len; i++) {
+                    var t1 = likeParams[i];
+                    var t2 = paramArr[i];
+                    //类型相同 或者 fullname都为null的泛型参数
+                    if (t1.ParameterType.FullName == t2.ParameterType.FullName) {
+                        continue;
+                    }
+
+                    //手动保持的类型
+                    var rmtype = t1.GetCustomAttribute<RememberTypeAttribute>();
+                    if (rmtype != null) {
+                        //泛型参数
+                        if (rmtype.IsGeneric && t2.ParameterType.FullName == null) {
                             continue;
                         }
-                        else
-                        {
-                            return false;
+                        //查找实际类型
+                        if (rmtype.TypeFullNameOrNull != null) {
+                            if (rmtype.TypeFullNameOrNull == t2.ParameterType.FullName) {
+                                continue;
+                            }
+
+                            var type = TypeResolver(rmtype.TypeFullNameOrNull, assemblies);
+                            if (type == t2.ParameterType) {
+                                continue;
+                            }
                         }
                     }
-                    else if (!type2.ParameterType.Equals(p1[index].ParameterType))
-                    {
-                        return false;
-                    }
+                    goto next;
                 }
+                return item;
+            next:
+                continue;
             }
-            return true;
+            return null;
         }
 
         private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
         {
-            InstallInternal(new[] { args.LoadedAssembly });
+            InstallInternal(false, new[] { args.LoadedAssembly });
         }
     }
 }
