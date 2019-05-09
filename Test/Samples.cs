@@ -35,7 +35,13 @@ namespace Test
             }
         }
         public string Work(string msg) {
-            return msg + "(worked)";
+            return msg + "(" + msg.GetType().Name + " worked)";
+        }
+        public string Work(int msg) {
+            return msg + "(" + msg.GetType().Name + " worked)";
+        }
+        public int Work(StringBuilder msg) {
+            return 123456000+ msg.Length;
         }
         public async Task<string> WorkAsync(string msg) {
             await Task.Delay(1);
@@ -135,16 +141,32 @@ namespace Test
 
         #region 实例方法（不实现OriginalMethod、方法名称和原方法名称不同）
         [HookMethod(typeof(Computer), "Work", "WorkFn")]
-        public string XXXWork([RememberType("System.String")]int msg) {
-            return "Hook "+WorkFn(msg);
+        public string XXXWork([RememberType("System.String")]object msg) {
+            return "Hook " + WorkFn(msg);
+        }
+        [HookMethod(typeof(Computer), "Work", "WorkFn")]
+        public string XXXWork([RememberType("System.Int32")]long msg) {
+            return "Hook " + WorkFn(msg);
+        }
+        [HookMethod(typeof(Computer), "Work", "WorkFn")]
+        public long XXXWork([RememberType("System.Text.StringBuilder")]Encoding msg) {
+            return WorkFn(msg)+50;
         }
 
         [OriginalMethod]
-        public object WorkFn(int msg) {//和上面方法参数签名一致即可正确匹配
+        public object WorkFn(long msg) {//注意此处值类型的参数必须也是值类型
             return null;
         }
         [OriginalMethod]
-        public object WorkFn(string msg) {//超级干扰，这个方法是无效的
+        public long WorkFn(Encoding msg) {//注意此处值类型的返回值必须也是值类型，内存长度必须相同或者更大，否则数据必然丢失
+            return 0;
+        }
+        [OriginalMethod]
+        public object WorkFn(object msg) {//和string的签名一致即可正确匹配
+            return null;
+        }
+        [OriginalMethod]
+        public object WorkFn(string msg) {//超级干扰，这个方法没有谁用到了
             return null;
         }
         #endregion
