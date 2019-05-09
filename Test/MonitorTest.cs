@@ -83,7 +83,8 @@ namespace Test
 
             Assert.AreEqual("Hook<int> 123", Computer.Any<int>(123));
             //引用类型的没法正确hook，不知道啥原因
-            //Assert.AreEqual("Hook<string> str", Computer.Any<string>("str"));
+            Assert.AreEqual("Not HooK str", "Not HooK " + Computer.Any<string>("str"));
+            Console.WriteLine("引用类型泛型参数的泛型方法无法被hook");
 
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁

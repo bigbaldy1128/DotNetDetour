@@ -145,7 +145,7 @@ namespace Test
             return "Hook " + WorkFn(msg);
         }
         [HookMethod(typeof(Computer), "Work", "WorkFn")]
-        public string XXXWork([RememberType("System.Int32")]long msg) {
+        public string XXXWork([RememberType("System.Int32")]int msg) {
             return "Hook " + WorkFn(msg);
         }
         [HookMethod(typeof(Computer), "Work", "WorkFn")]
@@ -154,7 +154,7 @@ namespace Test
         }
 
         [OriginalMethod]
-        public object WorkFn(long msg) {//注意此处值类型的参数必须也是值类型
+        public object WorkFn(int msg) {//注意此处值类型的参数必须也是完全一样的值类型
             return null;
         }
         [OriginalMethod]
