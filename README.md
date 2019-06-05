@@ -1,5 +1,7 @@
 
 [![Build Status](https://dev.azure.com/kissstudio/DotNetDetour/_apis/build/status/kissstudio.DotNetDetour?branchName=master)](https://dev.azure.com/kissstudio/DotNetDetour/_build/latest?definitionId=3?branchName=master)
+[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/halx99/yasio/blob/master/LICENSE)
 
 # :open_book:DotNetDetour
 DotNetDetour是一个用于.net方法hook的类库
