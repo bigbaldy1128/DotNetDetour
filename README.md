@@ -66,7 +66,7 @@ var msg=new SolidClass().Run("Hello World!");
 
 ## 普通方法Hook
 
-静态和非静态的普通方法Hook操作都是一模一样的，两步到位：新建一个类实现`IMethodHook`接口，编写普通Hook方法，用`HookMethod`特性标记此方法，有无static修饰、返回值类型不同都不影响，但参数签名要和被Hook的原始方法一致。
+静态和非静态的普通方法Hook操作都是一模一样的，两步到位：新建一个类实现`IMethodHook`接口，编写普通Hook方法，用`HookMethod`特性标记此方法，有无static修饰、返回值类型（仅针对引用性质的类型，非int等值类型）不同都不影响，但参数签名要和被Hook的原始方法一致，值类型和引用类型尽量不要混用。
 
 
 ### 第一步：新建一个类实现`IMethodHook`接口
@@ -91,7 +91,7 @@ public string MyMethod(string param){...}
 ### 注意：方法参数
 参数签名要和被Hook的原始方法一致，如果不一致将导致无法找到原始方法（原因：存在重载方法无法确认是哪个的问题）。
 
-如果存在我们无法使用的参数类型的时候（如：私有类型），我们可以用object等其他类型代替此类型，并把此参数用`RememberType`进行标记：
+如果存在我们无法使用的参数类型的时候（如：私有类型），我们可以用object等其他引用类型代替此类型（注意不要用值类型，否则可能出现内存访问错误），并把此参数用`RememberType`进行标记：
 ``` C#
 //目标方法:
 public string SolidMethod(MyClass data, int code){...}
