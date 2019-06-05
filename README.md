@@ -10,6 +10,9 @@ DotNetDetour是一个用于.net方法hook的类库
 * 支持.net基础类库方法的hook
 * 无任何性能影响，无需知道和改动被hook的方法源码
 
+## 实现原理
+https://bbs.csdn.net/topics/391958344
+
 ## 基础示例
 1. git clone本项目最新源码使用；或者NuGet安装（可能未及时更新）：`Install-Package DotNetDetour`, 
 或者：`Install-Package kissstudio.DotNetDetour`。
