@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Text;
 
 namespace Test
 {
@@ -51,7 +52,9 @@ namespace Test
         [TestMethod]
         public void InstanceMethod2() {
             MethodHook.Install();
-            Assert.AreEqual("Hook 土豆(worked)", new Computer().Work("土豆"));
+            Assert.AreEqual("Hook 土豆(String worked)", new Computer().Work("土豆"));
+            Assert.AreEqual("Hook 9527(Int32 worked)", new Computer().Work(9527));
+            Assert.AreEqual(123456053L, new Computer().Work(new StringBuilder("aaa")));
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
             var bak = SynchronizationContext.Current;
@@ -80,7 +83,8 @@ namespace Test
 
             Assert.AreEqual("Hook<int> 123", Computer.Any<int>(123));
             //引用类型的没法正确hook，不知道啥原因
-            //Assert.AreEqual("Hook<string> str", Computer.Any<string>("str"));
+            Assert.AreEqual("Not HooK str", "Not HooK " + Computer.Any<string>("str"));
+            Console.WriteLine("引用类型泛型参数的泛型方法无法被hook");
 
 
             //注意：存在SynchronizationContext时(如：HttpContext)，异步方法不能直接在同步方法中调用，真发生异步行为时100%死锁
