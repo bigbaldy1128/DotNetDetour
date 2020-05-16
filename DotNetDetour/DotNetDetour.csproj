@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DotNetDetour</RootNamespace>
     <AssemblyName>DotNetDetour</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -48,6 +48,7 @@
     <Compile Include="DetourFactory.cs" />
     <Compile Include="DetourWays\NativeDetourFor32Bit.cs" />
     <Compile Include="DetourWays\NativeDetourFor64Bit.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="IDetour.cs" />
     <Compile Include="IMethodMonitor.cs" />
     <Compile Include="LDasm.cs" />
