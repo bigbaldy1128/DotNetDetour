@@ -12,7 +12,7 @@ DotNetDetour是一个用于.net方法hook的类库
 * 支持静态方法，实例方法、属性方法、泛型类型的方法、泛型方法的hook
 * 支持.net基础类库方法的hook
 * 无任何性能影响，无需知道和改动被hook的方法源码
-
+* 兼容.net 4.0 框架的支持
 ## 实现原理
 https://bbs.csdn.net/topics/391958344
 
